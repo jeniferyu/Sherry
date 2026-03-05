@@ -1,0 +1,45 @@
+name: PrayerApp
+options:
+  bundleIdPrefix: com.prayerapp
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15"
+
+settings:
+  SWIFT_VERSION: 5.9
+  MARKETING_VERSION: "1.0"
+  CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  PrayerApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: PrayerApp
+        excludes:
+          - "**/*.md"
+    resources:
+      - path: PrayerApp/Resources/Assets.xcassets
+      - path: PrayerApp/Resources/Preview Content
+    coreDataModels:
+      - path: PrayerApp/Models/PrayerApp.xcdatamodeld
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.prayerapp.PrayerApp
+      INFOPLIST_FILE: PrayerApp/Info.plist
+      DEVELOPMENT_TEAM: ""
+      CODE_SIGN_IDENTITY: "iPhone Developer"
+      CODE_SIGN_STYLE: Automatic
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      TARGETED_DEVICE_FAMILY: "1"
+      SWIFT_VERSION: 5.9
+
+  PrayerAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PrayerAppTests
+    dependencies:
+      - target: PrayerApp
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.prayerapp.PrayerAppTests
