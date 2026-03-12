@@ -114,7 +114,7 @@
 		B28B784E5406275F568B4EE9 /* SessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionService.swift; sourceTree = "<group>"; };
 		B8EA8DCCFF300DCCB7C1E49A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BD9687A50D71C29489A70040 /* PrayerServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerServiceTests.swift; sourceTree = "<group>"; };
-		CE5C3BB3AECF4627B22C2631 /* PrayerApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PrayerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE5C3BB3AECF4627B22C2631 /* PrayerApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PrayerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D451416CD2D4000E6AF0E1A7 /* PrayerItem+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PrayerItem+CoreDataClass.swift"; sourceTree = "<group>"; };
 		D6BE275E3EEA87056B157BCB /* SessionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionServiceTests.swift; sourceTree = "<group>"; };
 		DC586C18C6311A683E51F38C /* GamificationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationServiceTests.swift; sourceTree = "<group>"; };
@@ -349,7 +349,6 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					12DCAA2AFF87B8CCCCDF8603 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -467,14 +466,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BRYA8R7DT6;
 				INFOPLIST_FILE = PrayerApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.prayerapp.PrayerApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prayerapp.sherry;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -642,14 +641,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BRYA8R7DT6;
 				INFOPLIST_FILE = PrayerApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.prayerapp.PrayerApp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prayerapp.sherry;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = 1;

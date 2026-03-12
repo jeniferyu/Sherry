@@ -95,8 +95,10 @@ struct RoadMapView: View {
 
     private var totalCard: some View {
         VStack(spacing: AppSpacing.xs) {
-            Image(systemName: "hands.sparkles.fill")
-                .font(.system(size: 28))
+            Image("prayingHands")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 28, height: 28)
                 .foregroundColor(Color.appPrimary)
             Text("\(viewModel.totalSessionCount)")
                 .font(AppFont.title())

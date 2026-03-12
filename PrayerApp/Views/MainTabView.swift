@@ -65,7 +65,12 @@ struct MainTabView: View {
             .offset(y: -12)
             .frame(maxWidth: .infinity)
 
-            tabButton(icon: AppIcons.prayers, label: "Prayers", tag: 3)
+            tabButton(label: "Prayers", tag: 3) {
+                Image("prayingHands")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+            }
             tabButton(icon: AppIcons.intercession, label: "Others", tag: 4)
         }
         .padding(.horizontal, AppSpacing.sm)
@@ -79,13 +84,21 @@ struct MainTabView: View {
         .padding(.horizontal, AppSpacing.md)
     }
 
+    // Convenience overload for SF Symbol tab buttons
     private func tabButton(icon: String, label: String, tag: Int) -> some View {
+        tabButton(label: label, tag: tag) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+        }
+    }
+
+    // Base implementation accepting any icon view
+    private func tabButton<Icon: View>(label: String, tag: Int, @ViewBuilder icon: () -> Icon) -> some View {
         Button {
             selectedTab = tag
         } label: {
             VStack(spacing: AppSpacing.xxs) {
-                Image(systemName: icon)
-                    .font(.system(size: 22))
+                icon()
                     .foregroundColor(selectedTab == tag ? Color.appPrimary : Color.appTextTertiary)
                 Text(label)
                     .font(AppFont.caption2())

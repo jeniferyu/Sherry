@@ -29,6 +29,7 @@ struct PrayerListView: View {
                 if viewModel.prayers.isEmpty {
                     EmptyStateView(
                         iconName: AppIcons.prayers,
+                        isAssetImage: true,
                         title: "No Prayers",
                         message: viewModel.selectedTab == .today
                             ? "Add a prayer or start praying to see items here."
@@ -154,7 +155,7 @@ struct PrayerListView: View {
                     viewModel.clearSelection()
                     showingSession = true
                 } label: {
-                    Label("Start Praying (\(viewModel.selectedPrayers.count))", systemImage: AppIcons.startPraying)
+                    Label("Start Praying (\(viewModel.selectedPrayers.count))", image: "prayingHands")
                 }
                 .primaryButtonStyle()
                 .padding(.horizontal, AppSpacing.lg)

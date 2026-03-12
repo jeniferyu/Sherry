@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EmptyStateView: View {
     let iconName: String
+    var isAssetImage: Bool = false
     let title: String
     let message: String
     var actionTitle: String? = nil
@@ -9,9 +10,17 @@ struct EmptyStateView: View {
 
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
-            Image(systemName: iconName)
-                .font(.system(size: 56, weight: .light))
-                .foregroundColor(Color.appTextTertiary)
+            if isAssetImage {
+                Image(iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 56, height: 56)
+                    .foregroundColor(Color.appTextTertiary)
+            } else {
+                Image(systemName: iconName)
+                    .font(.system(size: 56, weight: .light))
+                    .foregroundColor(Color.appTextTertiary)
+            }
 
             VStack(spacing: AppSpacing.xs) {
                 Text(title)
@@ -40,7 +49,8 @@ struct EmptyStateView: View {
 
 #Preview {
     EmptyStateView(
-        iconName: "hands.sparkles",
+        iconName: "prayingHands",
+        isAssetImage: true,
         title: "No Prayers Yet",
         message: "Tap the + button to add your first prayer.",
         actionTitle: "Add Prayer",

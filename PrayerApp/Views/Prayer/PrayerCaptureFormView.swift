@@ -96,7 +96,7 @@ struct PrayerCaptureFormView: View {
                                 onPrayNow?(session)
                             }
                         } label: {
-                            Label("Start Praying Now", systemImage: AppIcons.startPraying)
+                            Label("Start Praying Now", image: "prayingHands")
                         }
                         .primaryButtonStyle()
                         .disabled(!viewModel.isValid)

@@ -5,7 +5,7 @@ enum AppIcons {
     static let map          = "figure.walk"
     static let tree         = "tree"
     static let add          = "plus"
-    static let prayers      = "hands.sparkles"
+    static let prayers      = "prayingHands"   // asset image — use Image(_:)
     static let intercession = "person.2"
 
     // Navigation
@@ -20,7 +20,7 @@ enum AppIcons {
     static let archive       = "archivebox"
     static let addToToday    = "plus.circle"
     static let continuePrayer = "play.fill"
-    static let startPraying  = "hands.sparkles.fill"
+    static let startPraying  = "prayingHands"   // asset image — use Label(title, image:)
 
     // Status
     static let answered      = "sparkles"

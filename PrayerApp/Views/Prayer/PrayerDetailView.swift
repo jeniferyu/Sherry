@@ -52,7 +52,7 @@ struct PrayerDetailView: View {
                     if let lastPrayed = prayer.formattedLastPrayedDate {
                         metaItem(icon: "checkmark.circle", label: "Last Prayed", value: lastPrayed)
                     }
-                    metaItem(icon: "hands.sparkles", label: "Times Prayed", value: "\(prayer.prayedCount)")
+                    metaItem(icon: "prayingHands", label: "Times Prayed", value: "\(prayer.prayedCount)", isAssetImage: true)
                 }
                 .padding(.horizontal, AppSpacing.lg)
 
@@ -110,11 +110,19 @@ struct PrayerDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func metaItem(icon: String, label: String, value: String) -> some View {
+    private func metaItem(icon: String, label: String, value: String, isAssetImage: Bool = false) -> some View {
         VStack(spacing: AppSpacing.xxs) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(Color.appPrimary)
+            if isAssetImage {
+                Image(icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    .foregroundColor(Color.appPrimary)
+            } else {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(Color.appPrimary)
+            }
             Text(value)
                 .font(AppFont.caption())
                 .fontWeight(.semibold)

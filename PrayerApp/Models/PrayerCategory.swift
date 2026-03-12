@@ -29,7 +29,15 @@ enum PrayerCategory: String, CaseIterable, Codable {
         case .adoration:    return "heart.fill"
         case .confession:   return "exclamationmark.bubble.fill"
         case .thanksgiving: return "leaf.fill"
-        case .supplication: return "hands.sparkles.fill"
+        case .supplication: return "prayingHands"
+        }
+    }
+
+    /// True when `iconName` refers to an asset catalog image rather than an SF Symbol.
+    var isAssetIcon: Bool {
+        switch self {
+        case .supplication: return true
+        default:            return false
         }
     }
 

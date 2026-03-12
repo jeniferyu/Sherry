@@ -50,7 +50,7 @@ struct IntercessoryDetailView: View {
                 HStack(spacing: AppSpacing.md) {
                     metaItem(icon: "clock", label: "Added", value: prayer.formattedCreatedDate)
                     if let lastPrayed = prayer.formattedLastPrayedDate {
-                        metaItem(icon: "hands.sparkles", label: "Last Prayed", value: lastPrayed)
+                        metaItem(icon: "prayingHands", label: "Last Prayed", value: lastPrayed, isAssetImage: true)
                     }
                     metaItem(icon: "number", label: "Times Prayed", value: "\(prayer.prayedCount)")
                 }
@@ -121,11 +121,19 @@ struct IntercessoryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func metaItem(icon: String, label: String, value: String) -> some View {
+    private func metaItem(icon: String, label: String, value: String, isAssetImage: Bool = false) -> some View {
         VStack(spacing: AppSpacing.xxs) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(Color.appPrimary)
+            if isAssetImage {
+                Image(icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundColor(Color.appPrimary)
+            } else {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(Color.appPrimary)
+            }
             Text(value)
                 .font(AppFont.caption())
                 .fontWeight(.semibold)

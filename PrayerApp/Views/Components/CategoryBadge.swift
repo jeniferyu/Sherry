@@ -6,8 +6,15 @@ struct CategoryBadge: View {
 
     var body: some View {
         HStack(spacing: AppSpacing.xxs) {
-            Image(systemName: category.iconName)
-                .font(.system(size: compact ? 10 : 12))
+            if category.isAssetIcon {
+                Image(category.iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: compact ? 10 : 12, height: compact ? 10 : 12)
+            } else {
+                Image(systemName: category.iconName)
+                    .font(.system(size: compact ? 10 : 12))
+            }
             if !compact {
                 Text(category.displayName)
                     .font(AppFont.caption())

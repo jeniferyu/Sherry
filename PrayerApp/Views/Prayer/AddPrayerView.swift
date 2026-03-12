@@ -15,8 +15,10 @@ struct AddPrayerView: View {
             VStack(spacing: 0) {
                 // Header
                 VStack(spacing: AppSpacing.xs) {
-                    Image(systemName: "hands.sparkles.fill")
-                        .font(.system(size: 48))
+                    Image("prayingHands")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 48, height: 48)
                         .foregroundColor(Color.appPrimary)
                         .padding(.top, AppSpacing.xxl)
 
@@ -33,7 +35,12 @@ struct AddPrayerView: View {
                 // Action Cards
                 VStack(spacing: AppSpacing.md) {
                     actionCard(
-                        icon: "hands.sparkles.fill",
+                        icon: {
+                            Image("prayingHands")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 32, height: 32)
+                        },
                         title: "Start Praying Now",
                         subtitle: "Begin a focused prayer session with your saved items",
                         color: Color.appPrimary
@@ -42,7 +49,10 @@ struct AddPrayerView: View {
                     }
 
                     actionCard(
-                        icon: "plus.circle.fill",
+                        icon: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 32))
+                        },
                         title: "Add a Prayer Item",
                         subtitle: "Write down a new prayer to save or pray immediately",
                         color: Color.appAccent
@@ -95,8 +105,8 @@ struct AddPrayerView: View {
         }
     }
 
-    private func actionCard(
-        icon: String,
+    private func actionCard<Icon: View>(
+        @ViewBuilder icon: () -> Icon,
         title: String,
         subtitle: String,
         color: Color,
@@ -104,8 +114,7 @@ struct AddPrayerView: View {
     ) -> some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.lg) {
-                Image(systemName: icon)
-                    .font(.system(size: 32))
+                icon()
                     .foregroundColor(color)
                     .frame(width: 56, height: 56)
                     .background(color.opacity(0.12))
