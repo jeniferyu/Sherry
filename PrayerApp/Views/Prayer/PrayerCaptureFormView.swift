@@ -92,20 +92,20 @@ struct PrayerCaptureFormView: View {
                     // Action Buttons
                     VStack(spacing: AppSpacing.sm) {
                         Button {
-                            if let session = viewModel.prayNow() {
-                                onPrayNow?(session)
-                            }
-                        } label: {
-                            Label("Start Praying Now", image: "prayingHands")
-                        }
-                        .primaryButtonStyle()
-                        .disabled(!viewModel.isValid)
-
-                        Button {
                             viewModel.saveForLater()
                             onSaveForLater?()
                         } label: {
                             Text("Save for Later")
+                        }
+                        .secondaryButtonStyle()
+                        .disabled(!viewModel.isValid)
+
+                        Button {
+                            if let session = viewModel.prayNow() {
+                                onPrayNow?(session)
+                            }
+                        } label: {
+                            Text("Start Praying Now")
                         }
                         .secondaryButtonStyle()
                         .disabled(!viewModel.isValid)
