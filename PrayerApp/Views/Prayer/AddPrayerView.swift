@@ -7,6 +7,7 @@ struct AddPrayerView: View {
     @State private var showingCaptureForm = false
     @State private var showingSession = false
     @State private var activeSession: PrayerSession?
+    @State private var pendingSessionStart = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -73,15 +74,23 @@ struct AddPrayerView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingCaptureForm) {
+        .sheet(isPresented: $showingCaptureForm, onDismiss: {
+            if pendingSessionStart {
+                pendingSessionStart = false
+                showingSession = true
+            }
+        }) {
             PrayerCaptureFormView(
                 viewModel: captureVM,
-                onSaveForLater: { showingCaptureForm = false },
-                onPrayNow: { session in
+                onSaveForLater: {
                     showingCaptureForm = false
+                    dismiss()
+                },
+                onPrayNow: { session in
                     activeSession = session
                     sessionVM.startSession(items: session.itemList)
-                    showingSession = true
+                    pendingSessionStart = true
+                    showingCaptureForm = false
                 }
             )
         }
