@@ -98,12 +98,6 @@ struct PrayerCardView: View {
                 Spacer()
 
                 StatusIndicator(status: prayer.statusEnum)
-
-                if prayer.prayedCount > 0 {
-                    Label("\(prayer.prayedCount)", image: "prayingHands")
-                        .font(AppFont.caption2())
-                        .foregroundColor(Color.appTextTertiary)
-                }
             }
         }
         .padding(AppSpacing.md)

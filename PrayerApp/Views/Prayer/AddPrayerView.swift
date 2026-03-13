@@ -6,6 +6,7 @@ struct AddPrayerView: View {
 
     @State private var showingCaptureForm = false
     @State private var showingSession = false
+    @State private var showingPrayerFlow = false
     @State private var activeSession: PrayerSession?
     @State private var pendingSessionStart = false
 
@@ -27,7 +28,7 @@ struct AddPrayerView: View {
                         .font(AppFont.largeTitle())
                         .foregroundColor(Color.appTextPrimary)
 
-                    Text("What would you like to do?")
+                    Text("What would you like to say to God?")
                         .font(AppFont.body())
                         .foregroundColor(Color.appTextSecondary)
                 }
@@ -43,10 +44,10 @@ struct AddPrayerView: View {
                                 .frame(width: 32, height: 32)
                         },
                         title: "Start Praying Now",
-                        subtitle: "Begin a focused prayer session with your saved items",
+                        subtitle: "Begin a guided prayer session with God right now",
                         color: Color.appPrimary
                     ) {
-                        showingSession = true
+                        showingPrayerFlow = true
                     }
 
                     actionCard(
@@ -111,6 +112,10 @@ struct AddPrayerView: View {
                     sessionVM.reset()
                 })
             }
+        }
+        // Guided prayer flow — replaces the old "showingSession = true" shortcut
+        .fullScreenCover(isPresented: $showingPrayerFlow) {
+            PrayerFlowContainerView()
         }
     }
 
