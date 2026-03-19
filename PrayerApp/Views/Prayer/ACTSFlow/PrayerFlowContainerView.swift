@@ -88,9 +88,9 @@ struct PrayerFlowContainerView: View {
                 .foregroundColor(Color.appPrimary)
         }
 
-        // Skip button — only visible on ACTS steps
+        // Skip button — only visible on ACTS steps when in conversational entry (not summary)
         ToolbarItem(placement: .primaryAction) {
-            if case .actsStep(_) = flowVM.currentScreen {
+            if case .actsStep(_) = flowVM.currentScreen, !flowVM.showCollectedSummary {
                 Button("Skip") {
                     withAnimation {
                         flowVM.skipStep()
@@ -100,7 +100,7 @@ struct PrayerFlowContainerView: View {
             }
         }
 
-        // Back button for ACTS steps (go to previous step or back to style selection)
+        // Back button
         ToolbarItem(placement: .navigation) {
             if shouldShowBackButton {
                 Button {
@@ -123,6 +123,21 @@ struct PrayerFlowContainerView: View {
     private func navigateBack() {
         switch flowVM.currentScreen {
         case .actsStep(let category):
+            // If showing collected summary, go back to entry form
+            if flowVM.showCollectedSummary {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    flowVM.showCollectedSummary = false
+                }
+                return
+            }
+            // If mid-entry sub-steps, go back one sub-step
+            if flowVM.entryStep > 0 {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    flowVM.goBackEntryStep()
+                }
+                return
+            }
+            // Otherwise go back to the previous ACTS step or style selection
             switch category {
             case .adoration:    flowVM.goBackToStyleSelection()
             case .confession:   flowVM.currentScreen = .actsStep(.adoration)
@@ -134,7 +149,15 @@ struct PrayerFlowContainerView: View {
         case .singleCategoryPick:
             flowVM.goBackToStyleSelection()
         case .singleEntry(_):
-            flowVM.currentScreen = .singleCategoryPick
+            // If mid-entry sub-steps, go back one sub-step; otherwise go to category pick
+            if flowVM.entryStep > 0 {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    flowVM.goBackEntryStep()
+                }
+            } else {
+                flowVM.currentScreen = .singleCategoryPick
+                flowVM.clearForm()
+            }
         default:
             break
         }

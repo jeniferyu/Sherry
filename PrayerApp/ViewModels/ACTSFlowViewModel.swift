@@ -16,6 +16,15 @@ enum FlowScreen: Equatable {
     case singleEntry(PrayerCategory)
 }
 
+// MARK: - Entry Step Kind
+
+enum EntryStepKind: Equatable {
+    case title
+    case description
+    case forWhom
+    case tags
+}
+
 // MARK: - ACTSFlowViewModel
 
 final class ACTSFlowViewModel: ObservableObject {
@@ -29,6 +38,10 @@ final class ACTSFlowViewModel: ObservableObject {
 
     // MARK: - Collected Drafts
     @Published var collectedDrafts: [PrayerCategory: [PrayerItemDraft]] = [:]
+
+    // MARK: - Conversational Entry State
+    @Published var entryStep: Int = 0
+    @Published var showCollectedSummary: Bool = false
 
     // MARK: - Current Form Fields
     @Published var title: String = ""
@@ -118,6 +131,7 @@ final class ACTSFlowViewModel: ObservableObject {
         )
         collectedDrafts[category, default: []].append(draft)
         clearForm()
+        showCollectedSummary = true
         return true
     }
 
@@ -182,14 +196,48 @@ final class ACTSFlowViewModel: ObservableObject {
         )
     }
 
+    // MARK: - Conversational Entry Navigation
+
+    func entrySteps(for category: PrayerCategory) -> [EntryStepKind] {
+        if category == .supplication {
+            return [.title, .description, .forWhom, .tags]
+        }
+        return [.title, .description, .tags]
+    }
+
+    func currentEntryStep(for category: PrayerCategory) -> EntryStepKind {
+        let steps = entrySteps(for: category)
+        let index = min(entryStep, steps.count - 1)
+        return steps[index]
+    }
+
+    func advanceEntryStep(for category: PrayerCategory) {
+        let steps = entrySteps(for: category)
+        if entryStep < steps.count - 1 {
+            entryStep += 1
+        }
+    }
+
+    func goBackEntryStep() {
+        if entryStep > 0 {
+            entryStep -= 1
+        }
+    }
+
+    func isLastEntryStep(for category: PrayerCategory) -> Bool {
+        entryStep >= entrySteps(for: category).count - 1
+    }
+
     // MARK: - Helpers
 
-    private func clearForm() {
+    func clearForm() {
         title = ""
         content = ""
         tags = ""
         isForOthers = false
         intercessoryGroup = .family
+        entryStep = 0
+        showCollectedSummary = false
     }
 
     var actsStepOrder: [PrayerCategory] { [.adoration, .confession, .thanksgiving, .supplication] }
@@ -210,5 +258,18 @@ final class ACTSFlowViewModel: ObservableObject {
         case .thanksgiving: return "What are you thankful for today?"
         case .supplication: return "What would you like to ask God for?"
         }
+    }
+
+    func descriptionPrompt(for category: PrayerCategory) -> String {
+        switch category {
+        case .adoration:    return "Would you like to share why this moves your heart?"
+        case .confession:   return "Take a moment — anything more you'd like to express?"
+        case .thanksgiving: return "What makes this feel especially meaningful to you?"
+        case .supplication: return "Would you like to add more details about this request?"
+        }
+    }
+
+    func tagsPrompt() -> String {
+        return "Any tags to help you find this prayer later?"
     }
 }

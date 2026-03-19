@@ -10,6 +10,7 @@
 		007A6651E23A0245598FE3CE /* SinglePrayerFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91344B8653BC19284E15F9AD /* SinglePrayerFlowView.swift */; };
 		05BA416DBEC7F9C76BCE9C0E /* PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFE24A41D119ED2DC947DC4A /* PreviewData.swift */; };
 		0A646B58BC944288E0DF95A8 /* ACTSStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4899DBA71C71D8A2E7447195 /* ACTSStepView.swift */; };
+		B3F12A5C9D4E7081A2C63F11 /* ConversationalPrayerEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F12A5C9D4E7081A2C63F10 /* ConversationalPrayerEntryView.swift */; };
 		0CF836FBD8F6CA80E953FA2A /* PrayerCaptureFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A047D5CCC426425A95E08BEE /* PrayerCaptureFormView.swift */; };
 		15C3EC272FA820008F2DF8B4 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30C622AE7A048FD613514CC /* EmptyStateView.swift */; };
 		17451C16CA7053B9634639EA /* IntercessoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32983E9406E240779B1DFAC4 /* IntercessoryDetailView.swift */; };
@@ -95,6 +96,7 @@
 		3D2B3FAAE6DB47D7748195DE /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		44874F092DD7FF54A7EB9D07 /* PrayerApp.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PrayerApp.xcdatamodel; sourceTree = "<group>"; };
 		4899DBA71C71D8A2E7447195 /* ACTSStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACTSStepView.swift; sourceTree = "<group>"; };
+		B3F12A5C9D4E7081A2C63F10 /* ConversationalPrayerEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationalPrayerEntryView.swift; sourceTree = "<group>"; };
 		4A1C41DBFAEE079F27950B6B /* PrayerSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerSessionView.swift; sourceTree = "<group>"; };
 		52C30F30CF6645EC906006D4 /* PrayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerService.swift; sourceTree = "<group>"; };
 		5D172AA47222E0E83EA5EAFE /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
@@ -159,6 +161,7 @@
 			children = (
 				8BD21F83E316B0BA55317A3D /* ACTSReviewView.swift */,
 				4899DBA71C71D8A2E7447195 /* ACTSStepView.swift */,
+				B3F12A5C9D4E7081A2C63F10 /* ConversationalPrayerEntryView.swift */,
 				8958DB6D7595A57E74D337BA /* PrayerFlowContainerView.swift */,
 				6FD9F1CB0713C854F862EECB /* PrayerStyleSelectionView.swift */,
 				91344B8653BC19284E15F9AD /* SinglePrayerFlowView.swift */,
@@ -431,6 +434,7 @@
 				D903F032BE371CBBD79AD797 /* ACTSFlowViewModel.swift in Sources */,
 				C72D913FE731E88E01A05325 /* ACTSReviewView.swift in Sources */,
 				0A646B58BC944288E0DF95A8 /* ACTSStepView.swift in Sources */,
+				B3F12A5C9D4E7081A2C63F11 /* ConversationalPrayerEntryView.swift in Sources */,
 				579A68EFF1D8F1651034C68B /* AddPrayerView.swift in Sources */,
 				7BEAEC95BF19C4F6531BA21B /* AppIcons.swift in Sources */,
 				A9054918AF53A49B6C2F5632 /* AppTheme.swift in Sources */,
