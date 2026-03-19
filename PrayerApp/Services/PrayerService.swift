@@ -45,11 +45,18 @@ final class PrayerService: ObservableObject {
 
     // MARK: - Fetch
 
-    /// Returns all non-archived personal prayer items, sorted newest first.
+    /// Returns non-archived personal prayer items created today, sorted newest first.
     func fetchTodayPrayers() -> [PrayerItem] {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+
         let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
         request.predicate = NSPredicate(
-            format: "isIntercessory == NO AND status != %@", PrayerStatus.archived.rawValue
+            format: "isIntercessory == NO AND status != %@ AND createdDate >= %@ AND createdDate < %@",
+            PrayerStatus.archived.rawValue,
+            startOfDay as CVarArg,
+            endOfDay as CVarArg
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerItem.createdDate, ascending: false)]
         return (try? context.fetch(request)) ?? []
