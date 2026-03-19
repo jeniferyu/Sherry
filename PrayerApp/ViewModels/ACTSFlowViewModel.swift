@@ -53,6 +53,7 @@ final class ACTSFlowViewModel: ObservableObject {
     // MARK: - Review Screen
     @Published var todayPrayers: [PrayerItem] = []
     @Published var includeTodayPrayers: Bool = false
+    @Published var hasSavedPrayersToday: Bool = false
 
     var isFormValid: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -69,6 +70,9 @@ final class ACTSFlowViewModel: ObservableObject {
 
     func selectACTS() {
         collectedDrafts = [:]
+        includeTodayPrayers = false
+        todayPrayers = []
+        hasSavedPrayersToday = !prayerService.fetchTodayPrayers().isEmpty
         currentScreen = .actsStep(.adoration)
     }
 
@@ -106,6 +110,8 @@ final class ACTSFlowViewModel: ObservableObject {
 
     func goBackToStyleSelection() {
         collectedDrafts = [:]
+        includeTodayPrayers = false
+        todayPrayers = []
         clearForm()
         currentScreen = .styleSelection
     }
@@ -141,6 +147,17 @@ final class ACTSFlowViewModel: ObservableObject {
 
     var totalDraftCount: Int {
         collectedDrafts.values.reduce(0) { $0 + $1.count }
+    }
+
+    /// Returns false when skipping would lead to a guaranteed empty review screen —
+    /// specifically on Supplication (the last step) when no drafts have been collected
+    /// and there are no saved prayers to include either.
+    var canSkipCurrentStep: Bool {
+        guard case .actsStep(let category) = currentScreen else { return true }
+        if category == .supplication && totalDraftCount == 0 && !hasSavedPrayersToday {
+            return false
+        }
+        return true
     }
 
     // MARK: - Review

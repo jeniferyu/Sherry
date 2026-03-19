@@ -24,6 +24,7 @@ struct ACTSReviewView: View {
                 }
 
                 // Start Session button
+                let hasItems = viewModel.totalDraftCount > 0 || viewModel.includeTodayPrayers
                 Button {
                     let items = viewModel.buildSessionItems()
                     onStartSession(items)
@@ -31,6 +32,8 @@ struct ACTSReviewView: View {
                     Text("Start Prayer Session")
                 }
                 .primaryButtonStyle()
+                .disabled(!hasItems)
+                .opacity(hasItems ? 1 : 0.45)
                 .padding(.horizontal, AppSpacing.lg)
                 .padding(.bottom, AppSpacing.xl)
             }

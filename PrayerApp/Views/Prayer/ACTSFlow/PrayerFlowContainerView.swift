@@ -8,6 +8,7 @@ struct PrayerFlowContainerView: View {
 
     @State private var showingSession = false
     @State private var pendingItems: [PrayerItem] = []
+    @State private var showSkipBlockedAlert = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -19,6 +20,11 @@ struct PrayerFlowContainerView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+        }
+        .alert("Add a Prayer First", isPresented: $showSkipBlockedAlert) {
+            Button("Got it", role: .cancel) { }
+        } message: {
+            Text("You haven't added any prayers yet. Add at least one before you can start a session.")
         }
         .fullScreenCover(isPresented: $showingSession) {
             if sessionVM.isFinished, let finished = sessionVM.finishedSession {
@@ -92,11 +98,15 @@ struct PrayerFlowContainerView: View {
         ToolbarItem(placement: .primaryAction) {
             if case .actsStep(_) = flowVM.currentScreen, !flowVM.showCollectedSummary {
                 Button("Skip") {
-                    withAnimation {
-                        flowVM.skipStep()
+                    if flowVM.canSkipCurrentStep {
+                        withAnimation {
+                            flowVM.skipStep()
+                        }
+                    } else {
+                        showSkipBlockedAlert = true
                     }
                 }
-                .foregroundColor(Color.appTextSecondary)
+                .foregroundColor(flowVM.canSkipCurrentStep ? Color.appTextSecondary : Color.appTextTertiary)
             }
         }
 
