@@ -188,6 +188,7 @@ struct PrayerListView: View {
                 .padding(.vertical, AppSpacing.xxs + 2)
                 .background(isActive ? color : color.opacity(0.12))
                 .cornerRadius(AppRadius.full)
+                .contentShape(Capsule())
         }
     }
 }

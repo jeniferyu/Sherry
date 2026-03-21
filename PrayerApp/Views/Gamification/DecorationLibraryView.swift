@@ -106,6 +106,7 @@ struct DecorationLibraryView: View {
                         .padding(.vertical, AppSpacing.xxs)
                         .background(Color.appPrimary)
                         .cornerRadius(AppRadius.full)
+                        .contentShape(Capsule())
                 }
             }
         }

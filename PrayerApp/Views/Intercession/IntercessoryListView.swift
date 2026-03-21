@@ -220,6 +220,7 @@ struct IntercessoryListView: View {
                 .padding(.vertical, AppSpacing.xxs + 2)
                 .background(viewModel.selectedGroup == group ? Color.appPrimary : Color.appPrimary.opacity(0.12))
                 .cornerRadius(AppRadius.full)
+                .contentShape(Capsule())
         }
     }
 

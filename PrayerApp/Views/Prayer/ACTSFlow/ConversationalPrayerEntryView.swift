@@ -254,6 +254,7 @@ struct ConversationalPrayerEntryView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.sm)
+        .contentShape(Rectangle())
     }
 
     private func toggleChip(label: String, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -266,6 +267,7 @@ struct ConversationalPrayerEntryView: View {
                 .frame(maxWidth: .infinity)
                 .background(selected ? category.color : Color.appSurfaceSecond)
                 .cornerRadius(AppRadius.md)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.15), value: selected)

@@ -61,6 +61,7 @@ struct MainTabView: View {
                         .font(.system(size: 22, weight: .medium))
                         .foregroundColor(.white)
                 }
+                .contentShape(Circle())
             }
             .offset(y: -12)
             .frame(maxWidth: .infinity)
@@ -106,6 +107,7 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppSpacing.xs)
+            .contentShape(Rectangle())
         }
     }
 }

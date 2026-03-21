@@ -34,6 +34,7 @@ struct PrayerSessionView: View {
                         .frame(width: 36, height: 36)
                         .background(Color.appSurfaceSecond)
                         .clipShape(Circle())
+                        .contentShape(Circle())
                 }
 
                 Spacer()

@@ -89,27 +89,31 @@ struct CardModifier: ViewModifier {
     }
 }
 
-struct PrimaryButtonModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
+struct AppPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
             .font(AppFont.headline())
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppSpacing.md)
             .background(Color.appPrimary)
             .cornerRadius(AppRadius.lg)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
     }
 }
 
-struct SecondaryButtonModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
+struct AppSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
             .font(AppFont.headline())
             .foregroundColor(Color.appPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppSpacing.md)
             .background(Color.appSurfaceSecond)
             .cornerRadius(AppRadius.lg)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
     }
 }
 
@@ -119,10 +123,10 @@ extension View {
     }
 
     func primaryButtonStyle() -> some View {
-        modifier(PrimaryButtonModifier())
+        self.buttonStyle(AppPrimaryButtonStyle())
     }
 
     func secondaryButtonStyle() -> some View {
-        modifier(SecondaryButtonModifier())
+        self.buttonStyle(AppSecondaryButtonStyle())
     }
 }

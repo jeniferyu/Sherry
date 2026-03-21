@@ -110,6 +110,7 @@ struct PrayerSearchView: View {
             .padding(.vertical, AppSpacing.xs)
             .background(isActive ? color : color.opacity(0.12))
             .cornerRadius(AppRadius.full)
+            .contentShape(Capsule())
         }
     }
 }

@@ -141,6 +141,7 @@ struct PrayerCaptureFormView: View {
             .padding(.vertical, AppSpacing.sm)
             .background(isSelected ? category.fallbackColor : category.fallbackColor.opacity(0.15))
             .cornerRadius(AppRadius.md)
+            .contentShape(Rectangle())
         }
     }
 
@@ -159,6 +160,7 @@ struct PrayerCaptureFormView: View {
             .padding(.vertical, AppSpacing.xs)
             .background(isSelected ? Color.appPrimary : Color.appPrimary.opacity(0.12))
             .cornerRadius(AppRadius.full)
+            .contentShape(Capsule())
         }
     }
 }
