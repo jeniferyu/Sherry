@@ -48,6 +48,13 @@ final class GamificationService: ObservableObject {
         return (try? context.fetch(request)) ?? []
     }
 
+    /// Returns all DailyRecords sorted by date ascending, for use by the journey map.
+    func fetchAllDailyRecords() -> [DailyRecord] {
+        let request: NSFetchRequest<DailyRecord> = DailyRecord.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \DailyRecord.date, ascending: true)]
+        return (try? context.fetch(request)) ?? []
+    }
+
     // MARK: - Streak
 
     func getStreakCount() -> Int {

@@ -20,6 +20,8 @@
 		3D78D4FCED17514594A3929D /* DailyRecord+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD9DC80E7A65F44DCAFDBE27 /* DailyRecord+CoreDataClass.swift */; };
 		3F8FFE0BBAE073946AD3A752 /* PrayerApp.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = AB0850F560462CE09BFA404E /* PrayerApp.xcdatamodeld */; };
 		429E0BA2FBD6B746709C8CD9 /* DayDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 374A20CBAFEBFF207D4C5C31 /* DayDetailSheet.swift */; };
+		EE01CC22DD33FF44AA55BB66 /* JourneyNodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC01AA11BB22DD33EE44FF55 /* JourneyNodeView.swift */; };
+		FF11DD22EE33AA44BB55CC77 /* JourneyPathShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11BB22CC33EE44FF55AA66 /* JourneyPathShape.swift */; };
 		4686AF90D7A25B5E905BB3D1 /* PrayerDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178AD3842154194D6E07AA55 /* PrayerDetailView.swift */; };
 		49660CE1CFF99FD330242D7A /* PrayerSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E8C5EFD627E910E2206B9E8 /* PrayerSessionViewModel.swift */; };
 		4982B474A52EE19F488000AA /* PrayerStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A352846A6987DDF6BFA14C5 /* PrayerStatus.swift */; };
@@ -93,6 +95,8 @@
 		32983E9406E240779B1DFAC4 /* IntercessoryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercessoryDetailView.swift; sourceTree = "<group>"; };
 		369B57C1224E851958DAE4DC /* AppIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIcons.swift; sourceTree = "<group>"; };
 		374A20CBAFEBFF207D4C5C31 /* DayDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailSheet.swift; sourceTree = "<group>"; };
+		CC01AA11BB22DD33EE44FF55 /* JourneyNodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyNodeView.swift; sourceTree = "<group>"; };
+		DD11BB22CC33EE44FF55AA66 /* JourneyPathShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyPathShape.swift; sourceTree = "<group>"; };
 		3D2B3FAAE6DB47D7748195DE /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		44874F092DD7FF54A7EB9D07 /* PrayerApp.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PrayerApp.xcdatamodel; sourceTree = "<group>"; };
 		4899DBA71C71D8A2E7447195 /* ACTSStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACTSStepView.swift; sourceTree = "<group>"; };
@@ -308,6 +312,8 @@
 			children = (
 				374A20CBAFEBFF207D4C5C31 /* DayDetailSheet.swift */,
 				8AB950F8628373DC9F2099E0 /* DecorationLibraryView.swift */,
+				CC01AA11BB22DD33EE44FF55 /* JourneyNodeView.swift */,
+				DD11BB22CC33EE44FF55AA66 /* JourneyPathShape.swift */,
 				2DAC4957F42A1534C0E5F47A /* LeafDetailSheet.swift */,
 				25060F348D23F1D6986C5B21 /* PrayerTreeView.swift */,
 				7201E1E9A87F3C0334BD9E46 /* RoadMapView.swift */,
@@ -480,6 +486,8 @@
 				724BBCCC71BAB2F6D9901E4F /* PrayerTreeView.swift in Sources */,
 				D4619052C14494E6BA06B4C6 /* PrayerTreeViewModel.swift in Sources */,
 				05BA416DBEC7F9C76BCE9C0E /* PreviewData.swift in Sources */,
+				EE01CC22DD33FF44AA55BB66 /* JourneyNodeView.swift in Sources */,
+				FF11DD22EE33AA44BB55CC77 /* JourneyPathShape.swift in Sources */,
 				BDE5E56F926CDD16992C3F9F /* RoadMapView.swift in Sources */,
 				8C818EC3BB05E9CCDEBDF63B /* RoadMapViewModel.swift in Sources */,
 				8FA155EE487322FFC1D0DCE9 /* SessionCompleteView.swift in Sources */,
