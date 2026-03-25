@@ -62,7 +62,7 @@ final class PrayerService: ObservableObject {
         return (try? context.fetch(request)) ?? []
     }
 
-    /// Returns all prayer items created in the given calendar month.
+    /// Returns personal (non-intercessory) prayer items created in the given calendar month.
     func fetchMonthPrayers(month: Date) -> [PrayerItem] {
         let calendar = Calendar.current
         let comps = calendar.dateComponents([.year, .month], from: month)
@@ -71,7 +71,7 @@ final class PrayerService: ObservableObject {
 
         let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
         request.predicate = NSPredicate(
-            format: "createdDate >= %@ AND createdDate < %@",
+            format: "isIntercessory == NO AND createdDate >= %@ AND createdDate < %@",
             start as CVarArg, end as CVarArg
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerItem.createdDate, ascending: false)]
