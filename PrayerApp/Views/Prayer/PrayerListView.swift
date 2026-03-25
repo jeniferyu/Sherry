@@ -131,16 +131,34 @@ struct PrayerListView: View {
                                 viewModel.updateStatus(prayer, status: status)
                             }
                         )) {
-                            PrayerCardView(
-                                prayer: prayer,
-                                onStatusChange: { status in
-                                    viewModel.updateStatus(prayer, status: status)
-                                }
-                            )
+                            PrayerCardView(prayer: prayer)
                         }
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         .listRowSeparator(.hidden)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                viewModel.updateStatus(prayer, status: .answered)
+                            } label: {
+                                Label("Answered", systemImage: AppIcons.markAnswered)
+                            }
+                            .tint(.yellow)
+
+                            Button {
+                                viewModel.updateStatus(prayer, status: .archived)
+                            } label: {
+                                Label("Archive", systemImage: AppIcons.archive)
+                            }
+                            .tint(.gray)
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button {
+                                viewModel.updateStatus(prayer, status: .prayed)
+                            } label: {
+                                Label("Mark Prayed", systemImage: AppIcons.prayed)
+                            }
+                            .tint(Color.appPrimary)
+                        }
                     }
                 }
             }
