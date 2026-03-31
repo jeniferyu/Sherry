@@ -11,6 +11,8 @@ struct PrayerListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                prayersHeader
+
                 // Tab Picker
                 Picker("View", selection: $viewModel.selectedTab) {
                     ForEach(ListTab.allCases, id: \.self) { tab in
@@ -42,25 +44,7 @@ struct PrayerListView: View {
                 }
             }
             .background(Color.appBackground.ignoresSafeArea())
-            .navigationTitle("Prayers")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: PrayerSearchView()) {
-                        Image(systemName: AppIcons.search)
-                            .foregroundColor(Color.appPrimary)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        viewModel.isSelectMode.toggle()
-                        if !viewModel.isSelectMode { viewModel.clearSelection() }
-                    } label: {
-                        Text(viewModel.isSelectMode ? "Cancel" : "Select")
-                            .font(AppFont.subheadline())
-                            .foregroundColor(Color.appPrimary)
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .onAppear { viewModel.fetchPrayers() }
         .sheet(isPresented: $showingAddPrayer) { AddPrayerView() }
@@ -80,6 +64,54 @@ struct PrayerListView: View {
     }
 
     // MARK: - Subviews
+
+    private var prayersHeader: some View {
+        VStack(spacing: AppSpacing.xs) {
+            Text("Prayers")
+                .font(AppFont.largeTitle())
+                .foregroundColor(Color.appTextPrimary)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            HStack(spacing: AppSpacing.sm) {
+                Button {
+                    viewModel.isSelectMode.toggle()
+                    if !viewModel.isSelectMode { viewModel.clearSelection() }
+                } label: {
+                    Text(viewModel.isSelectMode ? "Cancel" : "Select")
+                        .font(AppFont.subheadline())
+                        .foregroundColor(Color.appPrimary)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                NavigationLink(destination: PrayerCalendarView()) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 19, weight: .medium))
+                        .foregroundColor(Color.appPrimary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink(destination: PrayerSearchView()) {
+                    Image(systemName: AppIcons.search)
+                        .font(.system(size: 19, weight: .medium))
+                        .foregroundColor(Color.appPrimary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.top, AppSpacing.md)
+        .padding(.bottom, AppSpacing.xxs)
+    }
 
     private var categoryFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {

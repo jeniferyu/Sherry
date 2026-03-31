@@ -34,6 +34,8 @@
 		724BBCCC71BAB2F6D9901E4F /* PrayerTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25060F348D23F1D6986C5B21 /* PrayerTreeView.swift */; };
 		747C86040C3329DA7E92B333 /* PrayerSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1C41DBFAEE079F27950B6B /* PrayerSessionView.swift */; };
 		78CE982D64EEB29E90B2FADF /* PrayerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD6318F2C62A1364211B7149 /* PrayerListView.swift */; };
+		AA11BB22CC33DD44EE55FF66 /* PrayerCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF66AA11BB22CC33DD44EE55 /* PrayerCalendarView.swift */; };
+		BB22CC33DD44EE55FF66AA11 /* PrayerCalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE55FF66AA11BB22CC33DD44 /* PrayerCalendarViewModel.swift */; };
 		7BEAEC95BF19C4F6531BA21B /* AppIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369B57C1224E851958DAE4DC /* AppIcons.swift */; };
 		7C1E80055CBFC59449EFDB85 /* CategoryBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB7E18EB84C27816A9510C7 /* CategoryBadge.swift */; };
 		840B120D4CA617EBF20794A3 /* PrayerServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD9687A50D71C29489A70040 /* PrayerServiceTests.swift */; };
@@ -130,6 +132,8 @@
 		AB769186948063D7B32FDEEF /* PrayerListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerListViewModel.swift; sourceTree = "<group>"; };
 		ACB7E18EB84C27816A9510C7 /* CategoryBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryBadge.swift; sourceTree = "<group>"; };
 		AD6318F2C62A1364211B7149 /* PrayerListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerListView.swift; sourceTree = "<group>"; };
+		FF66AA11BB22CC33DD44EE55 /* PrayerCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerCalendarView.swift; sourceTree = "<group>"; };
+		EE55FF66AA11BB22CC33DD44 /* PrayerCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerCalendarViewModel.swift; sourceTree = "<group>"; };
 		AE4C385312954B417E46B6AE /* IntercessoryGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntercessoryGroup.swift; sourceTree = "<group>"; };
 		B28B784E5406275F568B4EE9 /* SessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionService.swift; sourceTree = "<group>"; };
 		B8EA8DCCFF300DCCB7C1E49A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -232,6 +236,7 @@
 				A047D5CCC426425A95E08BEE /* PrayerCaptureFormView.swift */,
 				178AD3842154194D6E07AA55 /* PrayerDetailView.swift */,
 				AD6318F2C62A1364211B7149 /* PrayerListView.swift */,
+				FF66AA11BB22CC33DD44EE55 /* PrayerCalendarView.swift */,
 				1044AE159D731DBF5E76C409 /* PrayerSearchView.swift */,
 				4A1C41DBFAEE079F27950B6B /* PrayerSessionView.swift */,
 				3B83DB56AD49F054BD6A94C9 /* ACTSFlow */,
@@ -303,6 +308,7 @@
 				0E8C5EFD627E910E2206B9E8 /* PrayerSessionViewModel.swift */,
 				01E2ED8E460492E8080EE25E /* PrayerTreeViewModel.swift */,
 				F370049BB165884FF4053AA0 /* RoadMapViewModel.swift */,
+				EE55FF66AA11BB22CC33DD44 /* PrayerCalendarViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -474,6 +480,8 @@
 				8D155DFB78E8C8EDB2FAA192 /* PrayerItem+Extensions.swift in Sources */,
 				9AA0AB4487AE58DEA6325E56 /* PrayerItemDraft.swift in Sources */,
 				78CE982D64EEB29E90B2FADF /* PrayerListView.swift in Sources */,
+				AA11BB22CC33DD44EE55FF66 /* PrayerCalendarView.swift in Sources */,
+				BB22CC33DD44EE55FF66AA11 /* PrayerCalendarViewModel.swift in Sources */,
 				8ADE1F84181B1ED07B476B22 /* PrayerListViewModel.swift in Sources */,
 				188DEC1434315DF0BE5552E0 /* PrayerSearchView.swift in Sources */,
 				D366A89C84F37BCD9808DB6D /* PrayerService.swift in Sources */,
