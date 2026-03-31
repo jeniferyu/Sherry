@@ -20,6 +20,7 @@ final class PrayerListViewModel: ObservableObject {
     @Published var currentMonth: Date = Date()
     @Published var selectedPrayers: Set<NSManagedObjectID> = []
     @Published var isSelectMode: Bool = false
+    var isSearchMode: Bool = false
 
     // MARK: - Init
     init(prayerService: PrayerService = PrayerService()) {
@@ -59,6 +60,20 @@ final class PrayerListViewModel: ObservableObject {
         return result
     }
 
+    // MARK: - Search (all prayers, no date scope)
+
+    func searchAllPrayers() {
+        if searchText.isEmpty && statusFilter == nil && categoryFilter == nil {
+            prayers = []
+            return
+        }
+        var filters = FilterCriteria()
+        filters.statusFilter = statusFilter
+        filters.categoryFilter = categoryFilter
+        filters.isIntercessory = false
+        prayers = prayerService.searchPrayers(query: searchText, filters: filters)
+    }
+
     // MARK: - Filters
 
     func filterByStatus(_ status: PrayerStatus?) {
@@ -82,12 +97,12 @@ final class PrayerListViewModel: ObservableObject {
 
     func updateStatus(_ prayer: PrayerItem, status: PrayerStatus) {
         prayerService.updatePrayerStatus(prayer, status: status)
-        fetchPrayers()
+        isSearchMode ? searchAllPrayers() : fetchPrayers()
     }
 
     func addToToday(_ prayer: PrayerItem) {
         prayerService.updatePrayerStatus(prayer, status: .ongoing)
-        fetchPrayers()
+        isSearchMode ? searchAllPrayers() : fetchPrayers()
     }
 
     // MARK: - Selection

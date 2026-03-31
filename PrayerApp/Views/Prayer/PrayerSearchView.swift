@@ -12,12 +12,12 @@ struct PrayerSearchView: View {
                     .foregroundColor(Color.appTextTertiary)
                 TextField("Search prayers...", text: $viewModel.searchText)
                     .font(AppFont.body())
-                    .onChange(of: viewModel.searchText) { _ in viewModel.fetchPrayers() }
+                    .onChange(of: viewModel.searchText) { _ in viewModel.searchAllPrayers() }
 
                 if !viewModel.searchText.isEmpty {
                     Button {
                         viewModel.searchText = ""
-                        viewModel.fetchPrayers()
+                        viewModel.searchAllPrayers()
                     } label: {
                         Image(systemName: AppIcons.close)
                             .foregroundColor(Color.appTextTertiary)
@@ -36,7 +36,10 @@ struct PrayerSearchView: View {
                     filterChip(
                         label: "All Status",
                         isActive: viewModel.statusFilter == nil,
-                        action: { viewModel.filterByStatus(nil) }
+                        action: {
+                            viewModel.statusFilter = nil
+                            viewModel.searchAllPrayers()
+                        }
                     )
                     ForEach(PrayerStatus.allCases, id: \.self) { status in
                         filterChip(
@@ -44,7 +47,10 @@ struct PrayerSearchView: View {
                             icon: status.iconName,
                             color: status.color,
                             isActive: viewModel.statusFilter == status,
-                            action: { viewModel.filterByStatus(status) }
+                            action: {
+                                viewModel.statusFilter = (viewModel.statusFilter == status) ? nil : status
+                                viewModel.searchAllPrayers()
+                            }
                         )
                     }
                     Divider().frame(height: 20)
@@ -54,7 +60,10 @@ struct PrayerSearchView: View {
                             icon: category.iconName,
                             color: category.fallbackColor,
                             isActive: viewModel.categoryFilter == category,
-                            action: { viewModel.filterByCategory(category) }
+                            action: {
+                                viewModel.categoryFilter = (viewModel.categoryFilter == category) ? nil : category
+                                viewModel.searchAllPrayers()
+                            }
                         )
                     }
                 }
@@ -113,7 +122,13 @@ struct PrayerSearchView: View {
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Search Prayers")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { viewModel.fetchPrayers() }
+        .onAppear {
+            viewModel.isSearchMode = true
+            viewModel.searchAllPrayers()
+        }
+        .onDisappear {
+            viewModel.isSearchMode = false
+        }
     }
 
     private func filterChip(
