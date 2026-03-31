@@ -1,2 +1,6 @@
 .cursor/
 cursor_prayer_habit_app_development.md
+
+# Xcode user-specific state (do not commit)
+*.xcuserstate
+xcuserdata/
