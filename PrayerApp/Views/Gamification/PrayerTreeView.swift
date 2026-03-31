@@ -2,66 +2,42 @@ import SwiftUI
 
 struct PrayerTreeView: View {
     @StateObject private var viewModel = PrayerTreeViewModel()
-    @State private var showingLeafDetail = false
     @State private var showingStarDetail = false
     @State private var showingDecorationLibrary = false
-    @State private var canvasSize: CGSize = .zero
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Sky gradient background
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.53, green: 0.70, blue: 0.90),
-                        Color(red: 0.75, green: 0.88, blue: 0.95),
-                        Color.appBackground
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-
                 GeometryReader { geo in
+                    let w = geo.size.width
+                    let h = geo.size.height
+
                     ZStack {
-                        // Stars (top sky area)
+                        // Full scene canvas (sky, clouds, hills, tree, ground)
+                        sceneCanvas(growth: viewModel.treeGrowthFraction)
+                            .frame(width: w, height: h)
+
+                        // Stars in the sky region
                         ForEach(viewModel.stars) { star in
                             StarNodeView(star: star) {
                                 viewModel.selectStar(star)
                                 showingStarDetail = true
                             }
                             .position(
-                                x: star.position.x * geo.size.width,
-                                y: star.position.y * geo.size.height * 0.35
-                            )
-                        }
-
-                        // Tree image / illustration
-                        treeIllustration
-                            .frame(width: geo.size.width, height: geo.size.height * 0.75)
-                            .position(x: geo.size.width / 2, y: geo.size.height * 0.60)
-
-                        // Leaves (on tree canopy area)
-                        ForEach(viewModel.leaves) { leaf in
-                            LeafNodeView(leaf: leaf) {
-                                viewModel.selectLeaf(leaf)
-                                showingLeafDetail = true
-                            }
-                            .position(
-                                x: leaf.position.x * geo.size.width,
-                                y: 0.25 * geo.size.height + leaf.position.y * geo.size.height * 0.45
+                                x: star.position.x * w,
+                                y: star.position.y * h * 0.30
                             )
                         }
                     }
-                    .onAppear { canvasSize = geo.size }
                 }
+                .ignoresSafeArea()
 
-                // Leaf/Star count pill
+                // Stats pill
                 VStack {
                     HStack {
                         Spacer()
                         HStack(spacing: AppSpacing.md) {
-                            Label("\(viewModel.leaves.count)", systemImage: AppIcons.leaf)
+                            Label("\(viewModel.yearSessionCount)", systemImage: "figure.walk.motion")
                                 .font(AppFont.caption())
                             Label("\(viewModel.stars.count)", systemImage: AppIcons.star)
                                 .font(AppFont.caption())
@@ -75,7 +51,7 @@ struct PrayerTreeView: View {
                     }
                     Spacer()
                 }
-                .padding(.top, AppSpacing.md)
+                .padding(.top, 60)
             }
             .navigationTitle("Prayer Tree")
             .navigationBarTitleDisplayMode(.inline)
@@ -91,15 +67,6 @@ struct PrayerTreeView: View {
             }
         }
         .onAppear { viewModel.fetchTreeData() }
-        .sheet(isPresented: $showingLeafDetail) {
-            if let leaf = viewModel.selectedLeaf {
-                LeafDetailSheet(leaf: leaf, onDismiss: {
-                    showingLeafDetail = false
-                    viewModel.clearSelection()
-                })
-                .presentationDetents([.medium])
-            }
-        }
         .sheet(isPresented: $showingStarDetail) {
             if let star = viewModel.selectedStar {
                 StarDetailSheet(star: star, onDismiss: {
@@ -114,97 +81,202 @@ struct PrayerTreeView: View {
         }
     }
 
-    // MARK: - Tree Illustration
+    // MARK: - Full Scene Canvas
 
-    private var treeIllustration: some View {
-        Canvas { context, size in
-            let trunkWidth: CGFloat = size.width * 0.06
-            let trunkHeight: CGFloat = size.height * 0.45
-            let trunkX: CGFloat = size.width / 2
-            let trunkTop: CGFloat = size.height * 0.55
+    private func sceneCanvas(growth: Double) -> some View {
+        Canvas { ctx, size in
+            let w = size.width
+            let h = size.height
+            let g = max(0.02, growth)
 
-            // Trunk
-            var trunk = Path()
-            trunk.move(to: CGPoint(x: trunkX - trunkWidth / 2, y: size.height))
-            trunk.addLine(to: CGPoint(x: trunkX - trunkWidth / 4, y: trunkTop))
-            trunk.addLine(to: CGPoint(x: trunkX + trunkWidth / 4, y: trunkTop))
-            trunk.addLine(to: CGPoint(x: trunkX + trunkWidth / 2, y: size.height))
-            context.fill(trunk, with: .color(Color(red: 0.55, green: 0.38, blue: 0.22)))
-
-            // Canopy layers (3 ellipses)
-            let canopyColor = Color(red: 0.35, green: 0.60, blue: 0.38)
-            let darkCanopy  = Color(red: 0.28, green: 0.50, blue: 0.30)
-
-            let layers: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
-                // (centerY ratio, width ratio, height ratio, darkness)
-                (0.62, 0.70, 0.28, 1.0),
-                (0.45, 0.55, 0.28, 0.85),
-                (0.28, 0.40, 0.28, 0.70),
-            ]
-
-            for (cy, w, h, _) in layers {
-                let rect = CGRect(
-                    x: trunkX - size.width * w / 2,
-                    y: size.height * cy - size.height * h / 2,
-                    width: size.width * w,
-                    height: size.height * h
-                )
-                context.fill(
-                    Path(ellipseIn: rect),
-                    with: .color(canopyColor)
-                )
-                // Slight shadow layer
-                let shadowRect = rect.insetBy(dx: 8, dy: 4).offsetBy(dx: 4, dy: 8)
-                context.fill(
-                    Path(ellipseIn: shadowRect),
-                    with: .color(darkCanopy.opacity(0.35))
-                )
-            }
-
-            // Ground
-            let groundRect = CGRect(x: 0, y: size.height * 0.92, width: size.width, height: size.height * 0.08)
-            context.fill(
-                Path(roundedRect: groundRect, cornerRadius: 0),
-                with: .color(Color(red: 0.55, green: 0.72, blue: 0.42).opacity(0.5))
-            )
+            drawSky(ctx: ctx, w: w, h: h)
+            drawClouds(ctx: ctx, w: w, h: h)
+            drawForeground(ctx: ctx, w: w, h: h)
+            drawTree(ctx: ctx, w: w, h: h, g: g)
         }
     }
-}
 
-// MARK: - Leaf Node
+    // MARK: - Sky
 
-struct LeafNodeView: View {
-    let leaf: LeafData
-    let onTap: () -> Void
+    private func drawSky(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
+        let skyRect = CGRect(x: 0, y: 0, width: w, height: h)
+        ctx.fill(Path(skyRect), with: .linearGradient(
+            Gradient(colors: [
+                Color(red: 0.45, green: 0.72, blue: 0.95),
+                Color(red: 0.60, green: 0.82, blue: 0.96),
+                Color(red: 0.75, green: 0.90, blue: 0.97),
+            ]),
+            startPoint: CGPoint(x: w / 2, y: 0),
+            endPoint: CGPoint(x: w / 2, y: h * 0.55)
+        ))
+    }
 
-    @State private var animate = false
+    // MARK: - Clouds
 
-    var body: some View {
-        Button(action: onTap) {
-            ZStack {
-                if leaf.isAnswered {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color.appAnswered)
-                        .shadow(color: Color.appAnswered.opacity(0.5), radius: 4)
-                } else {
-                    Image(systemName: "leaf.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color.thanksgivingColor)
-                        .rotationEffect(.degrees(Double.random(in: -30...30)))
-                        .scaleEffect(animate ? 1.05 : 0.95)
-                }
-            }
+    private func drawClouds(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
+        let cloudColor = Color.white.opacity(0.85)
+
+        drawCloudBlob(ctx: ctx, cx: w * 0.20, cy: h * 0.10, rw: 50, rh: 22, color: cloudColor)
+        drawCloudBlob(ctx: ctx, cx: w * 0.75, cy: h * 0.08, rw: 60, rh: 25, color: cloudColor)
+        drawCloudBlob(ctx: ctx, cx: w * 0.50, cy: h * 0.18, rw: 45, rh: 18, color: cloudColor)
+        drawCloudBlob(ctx: ctx, cx: w * 0.88, cy: h * 0.22, rw: 38, rh: 16, color: cloudColor)
+        drawCloudBlob(ctx: ctx, cx: w * 0.12, cy: h * 0.25, rw: 42, rh: 18, color: cloudColor)
+    }
+
+    private func drawCloudBlob(ctx: GraphicsContext, cx: CGFloat, cy: CGFloat,
+                                rw: CGFloat, rh: CGFloat, color: Color) {
+        let offsets: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
+            (0, 0, 1.0, 1.0),
+            (-0.6, -0.15, 0.75, 0.80),
+            (0.55, -0.10, 0.80, 0.85),
+            (-0.25, -0.35, 0.60, 0.65),
+            (0.30, -0.30, 0.65, 0.70),
+        ]
+        for (dx, dy, sw, sh) in offsets {
+            let rect = CGRect(
+                x: cx + dx * rw - rw * sw / 2,
+                y: cy + dy * rh - rh * sh / 2,
+                width: rw * sw,
+                height: rh * sh
+            )
+            ctx.fill(Path(ellipseIn: rect), with: .color(color))
         }
-        .buttonStyle(.plain)
-        .onAppear {
-            withAnimation(
-                .easeInOut(duration: Double.random(in: 1.5...2.5))
-                .repeatForever(autoreverses: true)
-            ) {
-                animate = true
-            }
+    }
+
+    // MARK: - Foreground Ground
+
+    private func drawForeground(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
+        let grassColor = Color(red: 0.42, green: 0.65, blue: 0.35)
+        let grassDark = Color(red: 0.35, green: 0.55, blue: 0.28)
+
+        var path = Path()
+        let baseY = h * 0.68
+        path.move(to: CGPoint(x: 0, y: baseY + h * 0.03))
+        path.addQuadCurve(to: CGPoint(x: w * 0.30, y: baseY),
+                          control: CGPoint(x: w * 0.15, y: baseY - h * 0.02))
+        path.addQuadCurve(to: CGPoint(x: w * 0.55, y: baseY + h * 0.01),
+                          control: CGPoint(x: w * 0.42, y: baseY - h * 0.01))
+        path.addQuadCurve(to: CGPoint(x: w, y: baseY),
+                          control: CGPoint(x: w * 0.80, y: baseY - h * 0.02))
+        path.addLine(to: CGPoint(x: w, y: h))
+        path.addLine(to: CGPoint(x: 0, y: h))
+        path.closeSubpath()
+        ctx.fill(path, with: .linearGradient(
+            Gradient(colors: [grassColor, grassDark]),
+            startPoint: CGPoint(x: w / 2, y: baseY),
+            endPoint: CGPoint(x: w / 2, y: h)
+        ))
+    }
+
+    // MARK: - Tree
+
+    private func drawTree(ctx: GraphicsContext, w: CGFloat, h: CGFloat, g: Double) {
+        let centerX = w / 2
+        let groundY = h * 0.70
+
+        // Trunk
+        let maxTrunkH = h * 0.32
+        let maxTrunkW = w * 0.07
+        let trunkH = maxTrunkH * lerp(0.18, 1.0, g)
+        let trunkW = maxTrunkW * lerp(0.35, 1.0, g)
+        let trunkBottom = groundY
+        let trunkTop = trunkBottom - trunkH
+
+        let trunkColor = Color(red: 0.52, green: 0.36, blue: 0.20)
+        let trunkDark = Color(red: 0.40, green: 0.28, blue: 0.15)
+
+        // Main trunk (tapered)
+        var trunk = Path()
+        let topTaper: CGFloat = 0.35
+        trunk.move(to: CGPoint(x: centerX - trunkW / 2, y: trunkBottom))
+        trunk.addLine(to: CGPoint(x: centerX - trunkW * topTaper / 2, y: trunkTop))
+        trunk.addLine(to: CGPoint(x: centerX + trunkW * topTaper / 2, y: trunkTop))
+        trunk.addLine(to: CGPoint(x: centerX + trunkW / 2, y: trunkBottom))
+        trunk.closeSubpath()
+        ctx.fill(trunk, with: .color(trunkColor))
+
+        // Trunk shading (right side darker)
+        var trunkShade = Path()
+        trunkShade.move(to: CGPoint(x: centerX, y: trunkBottom))
+        trunkShade.addLine(to: CGPoint(x: centerX, y: trunkTop))
+        trunkShade.addLine(to: CGPoint(x: centerX + trunkW * topTaper / 2, y: trunkTop))
+        trunkShade.addLine(to: CGPoint(x: centerX + trunkW / 2, y: trunkBottom))
+        trunkShade.closeSubpath()
+        ctx.fill(trunkShade, with: .color(trunkDark.opacity(0.3)))
+
+        // Branches (when growth > 0.3)
+        if g > 0.3 {
+            let branchY = trunkTop + trunkH * 0.35
+            let branchLen = trunkW * lerp(1.0, 3.0, g)
+            let branchThick: CGFloat = lerp(1.5, 3.5, g)
+
+            // Left branch
+            var lb = Path()
+            lb.move(to: CGPoint(x: centerX - trunkW * 0.15, y: branchY))
+            lb.addLine(to: CGPoint(x: centerX - branchLen, y: branchY - trunkH * 0.12))
+            ctx.stroke(lb, with: .color(trunkColor), lineWidth: branchThick)
+
+            // Right branch
+            var rb = Path()
+            rb.move(to: CGPoint(x: centerX + trunkW * 0.15, y: branchY + trunkH * 0.05))
+            rb.addLine(to: CGPoint(x: centerX + branchLen * 0.8, y: branchY - trunkH * 0.08))
+            ctx.stroke(rb, with: .color(trunkColor), lineWidth: branchThick)
         }
+
+        // Canopy -- puffy overlapping circles like the reference image
+        let scale = lerp(0.25, 1.0, g)
+
+        let mainGreen = Color(red: 0.32, green: 0.62, blue: 0.30)
+        let lightGreen = Color(red: 0.40, green: 0.72, blue: 0.38)
+        let darkGreen = Color(red: 0.22, green: 0.48, blue: 0.22)
+
+        struct Blob {
+            let dx: CGFloat; let dy: CGFloat; let r: CGFloat; let color: Color
+            let minGrowth: Double
+        }
+
+        let canopyCenterY = trunkTop - h * 0.02 * scale
+
+        let blobs: [Blob] = [
+            // Bottom wide blobs
+            Blob(dx: -0.08, dy: 0.04, r: 0.14, color: mainGreen, minGrowth: 0.0),
+            Blob(dx: 0.09, dy: 0.05, r: 0.13, color: darkGreen, minGrowth: 0.0),
+            Blob(dx: 0.0, dy: 0.02, r: 0.12, color: lightGreen, minGrowth: 0.0),
+            // Middle blobs
+            Blob(dx: -0.06, dy: -0.04, r: 0.12, color: mainGreen, minGrowth: 0.15),
+            Blob(dx: 0.07, dy: -0.03, r: 0.11, color: lightGreen, minGrowth: 0.15),
+            Blob(dx: -0.11, dy: 0.0, r: 0.10, color: darkGreen, minGrowth: 0.25),
+            Blob(dx: 0.12, dy: 0.01, r: 0.10, color: mainGreen, minGrowth: 0.25),
+            // Upper blobs
+            Blob(dx: 0.0, dy: -0.08, r: 0.10, color: lightGreen, minGrowth: 0.35),
+            Blob(dx: -0.04, dy: -0.11, r: 0.08, color: mainGreen, minGrowth: 0.50),
+            Blob(dx: 0.05, dy: -0.10, r: 0.09, color: darkGreen, minGrowth: 0.45),
+            // Top crown
+            Blob(dx: 0.0, dy: -0.14, r: 0.07, color: lightGreen, minGrowth: 0.65),
+            Blob(dx: -0.02, dy: -0.17, r: 0.05, color: mainGreen, minGrowth: 0.80),
+        ]
+
+        for blob in blobs where g >= blob.minGrowth {
+            let bx = centerX + w * blob.dx * scale
+            let by = canopyCenterY + h * blob.dy * scale
+            let br = w * blob.r * scale
+
+            let rect = CGRect(x: bx - br, y: by - br, width: br * 2, height: br * 2)
+            ctx.fill(Path(ellipseIn: rect), with: .color(blob.color))
+
+            // Highlight on top-left
+            let hlRect = CGRect(x: bx - br * 0.5, y: by - br * 0.6, width: br * 0.8, height: br * 0.6)
+            ctx.fill(Path(ellipseIn: hlRect), with: .color(lightGreen.opacity(0.25)))
+        }
+
+        // Small ground shadow under tree
+        let shadowW = trunkW * 3.0 * scale
+        let shadowRect = CGRect(x: centerX - shadowW / 2, y: groundY - 3, width: shadowW, height: 8)
+        ctx.fill(Path(ellipseIn: shadowRect), with: .color(Color.black.opacity(0.08)))
+    }
+
+    private func lerp(_ a: Double, _ b: Double, _ t: Double) -> CGFloat {
+        CGFloat(a + (b - a) * t)
     }
 }
 
@@ -220,7 +292,7 @@ struct StarNodeView: View {
         Button(action: onTap) {
             Image(systemName: star.prayerItem.statusEnum == .answered ? "star.fill" : "star")
                 .font(.system(size: 14))
-                .foregroundColor(star.prayerItem.statusEnum == .answered ? .appAnswered : .white.opacity(0.8))
+                .foregroundColor(star.prayerItem.statusEnum == .answered ? .appAnswered : .white.opacity(0.85))
                 .scaleEffect(twinkle ? 1.2 : 0.9)
                 .opacity(twinkle ? 1.0 : 0.7)
         }
@@ -245,7 +317,6 @@ struct StarDetailSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: AppSpacing.lg) {
-                // Star icon
                 ZStack {
                     Circle()
                         .fill(Color.appAnswered.opacity(0.15))

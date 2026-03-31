@@ -53,6 +53,25 @@ final class SessionService: ObservableObject {
         return (try? context.fetch(request)) ?? []
     }
 
+    /// Returns all sessions for a given calendar year, sorted newest first.
+    func fetchSessions(forYear year: Int) -> [PrayerSession] {
+        var comps = DateComponents()
+        comps.year = year
+        comps.month = 1
+        comps.day = 1
+        let calendar = Calendar.current
+        guard let start = calendar.date(from: comps),
+              let end = calendar.date(byAdding: .year, value: 1, to: start) else { return [] }
+
+        let request: NSFetchRequest<PrayerSession> = PrayerSession.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "date >= %@ AND date < %@",
+            start as CVarArg, end as CVarArg
+        )
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerSession.date, ascending: false)]
+        return (try? context.fetch(request)) ?? []
+    }
+
     /// Returns prayer items that belong to a specific session.
     func fetchPrayerItems(session: PrayerSession) -> [PrayerItem] {
         session.itemList

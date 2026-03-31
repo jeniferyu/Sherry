@@ -1,18 +1,12 @@
 import Foundation
 import SwiftUI
 import Combine
-
-struct LeafData: Identifiable {
-    let id: UUID
-    let prayerItem: PrayerItem
-    let position: CGPoint  // Normalized 0-1 position on tree canvas
-    var isAnswered: Bool { prayerItem.statusEnum == .answered }
-}
+import CoreData
 
 struct StarData: Identifiable {
     let id: UUID
     let prayerItem: PrayerItem
-    let position: CGPoint
+    var position: CGPoint
 }
 
 final class PrayerTreeViewModel: ObservableObject {
@@ -22,11 +16,16 @@ final class PrayerTreeViewModel: ObservableObject {
     private let gamificationService: GamificationService
 
     // MARK: - Published State
-    @Published var leaves: [LeafData] = []
     @Published var stars: [StarData] = []
-    @Published var selectedLeaf: LeafData? = nil
     @Published var selectedStar: StarData? = nil
-    @Published var currentMonth: Date = Date()
+    @Published var yearSessionCount: Int = 0
+
+    /// Approximate cap: 1 session per day for a full year
+    let maxYearSessions: Int = 365
+
+    var treeGrowthFraction: Double {
+        min(1.0, Double(yearSessionCount) / Double(maxYearSessions))
+    }
 
     // MARK: - Init
     init(
@@ -39,70 +38,78 @@ final class PrayerTreeViewModel: ObservableObject {
 
     // MARK: - Fetch
 
-    func fetchTreeData(for month: Date? = nil) {
-        let target = month ?? currentMonth
-        let sessions = sessionService.fetchSessions(forMonth: target)
-        buildLeaves(from: sessions)
+    func fetchTreeData() {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let sessions = sessionService.fetchSessions(forYear: currentYear)
+
+        yearSessionCount = sessions.count
         buildStars(from: sessions)
     }
 
-    private func buildLeaves(from sessions: [PrayerSession]) {
-        // Each personal prayer item with prayedCount > 0 gets a leaf
-        var seen = Set<NSManagedObjectID>()
-        var result: [LeafData] = []
-
-        for session in sessions {
-            for item in session.personalItems where !seen.contains(item.objectID) {
-                seen.insert(item.objectID)
-                let position = randomLeafPosition(seed: item.objectID.hashValue)
-                result.append(LeafData(id: item.id ?? UUID(), prayerItem: item, position: position))
-            }
-        }
-        leaves = result
-    }
-
     private func buildStars(from sessions: [PrayerSession]) {
-        // Each intercessory prayer item gets a star
         var seen = Set<NSManagedObjectID>()
-        var result: [StarData] = []
+        var items: [(PrayerItem, Date)] = []
 
         for session in sessions {
             for item in session.intercessoryItems where !seen.contains(item.objectID) {
                 seen.insert(item.objectID)
-                let position = randomStarPosition(seed: item.objectID.hashValue)
-                result.append(StarData(id: item.id ?? UUID(), prayerItem: item, position: position))
+                let date = item.lastPrayedDate ?? item.createdDate ?? .distantPast
+                items.append((item, date))
             }
         }
+
+        items.sort { $0.1 > $1.1 }
+
+        let count = items.count
+        var result: [StarData] = []
+
+        for (index, (item, _)) in items.enumerated() {
+            let position = starPosition(index: index, total: count, seed: item.objectID.hashValue)
+            result.append(StarData(
+                id: item.id ?? UUID(),
+                prayerItem: item,
+                position: position
+            ))
+        }
+
         stars = result
     }
 
-    // Deterministic pseudo-random positions based on a seed
-    private func randomLeafPosition(seed: Int) -> CGPoint {
-        var rng = seededRNG(seed: seed)
-        let x = 0.15 + rng.nextDouble() * 0.70
-        let y = 0.10 + rng.nextDouble() * 0.60
-        return CGPoint(x: x, y: y)
+    /// Positions stars scattered across the sky band.
+    /// Newer items (lower index) get higher positions (lower Y).
+    /// X alternates left/right of center with a deterministic offset.
+    private func starPosition(index: Int, total: Int, seed: Int) -> CGPoint {
+        guard total > 0 else { return CGPoint(x: 0.5, y: 0.15) }
+
+        let yPadding: Double = 0.05
+        let yRange: Double = 0.90
+
+        let y: Double
+        if total == 1 {
+            y = yPadding + yRange * 0.5
+        } else {
+            y = yPadding + yRange * Double(index) / Double(total - 1)
+        }
+
+        var rng = SeededRNG(state: UInt64(bitPattern: Int64(seed)))
+        let jitter = rng.nextDouble() * 0.15
+
+        let baseX: Double
+        if index % 2 == 0 {
+            baseX = 0.25 + jitter
+        } else {
+            baseX = 0.65 + jitter
+        }
+
+        let xClamped = min(0.92, max(0.08, baseX))
+
+        return CGPoint(x: xClamped, y: y)
     }
 
-    private func randomStarPosition(seed: Int) -> CGPoint {
-        var rng = seededRNG(seed: seed &+ 12345)
-        let x = rng.nextDouble()
-        let y = rng.nextDouble() * 0.30
-        return CGPoint(x: x, y: y)
-    }
+    // MARK: - Selection
 
-    // MARK: - Detail Actions
-
-    func selectLeaf(_ leaf: LeafData) { selectedLeaf = leaf }
     func selectStar(_ star: StarData) { selectedStar = star }
-    func clearSelection() { selectedLeaf = nil; selectedStar = nil }
-
-    func getLeafDetail(leaf: LeafData) -> [PrayerItem] {
-        sessionService
-            .fetchSessions(forMonth: currentMonth)
-            .filter { $0.personalItems.contains { $0.objectID == leaf.prayerItem.objectID } }
-            .flatMap { $0.personalItems }
-    }
+    func clearSelection() { selectedStar = nil }
 }
 
 // MARK: - Simple seeded RNG
@@ -114,9 +121,3 @@ private struct SeededRNG {
         return Double(state >> 33) / Double(UInt64(1) << 31)
     }
 }
-
-private func seededRNG(seed: Int) -> SeededRNG {
-    SeededRNG(state: UInt64(bitPattern: Int64(seed)))
-}
-
-import CoreData
