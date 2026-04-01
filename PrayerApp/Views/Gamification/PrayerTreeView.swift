@@ -73,7 +73,7 @@ struct PrayerTreeView: View {
         }
     }
 
-    /// White ring + 🎁; mint “Docoration” pill overlaps the bottom of the ring (reference-style).
+    /// White ring + treasure chest asset; mint “Docoration” pill overlaps the bottom of the ring.
     private var decorationGiftBadge: some View {
         VStack(spacing: -10) {
             ZStack {
@@ -83,8 +83,10 @@ struct PrayerTreeView: View {
                     .shadow(color: Color.white.opacity(0.55), radius: 4, y: 0)
                     .shadow(color: Color.white.opacity(0.3), radius: 10, y: 0)
 
-                Text("🎁")
-                    .font(.system(size: 40))
+                Image("treasure_chest")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 55, height: 55)
             }
 
             Text("Docoration")
