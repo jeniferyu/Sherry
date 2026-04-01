@@ -32,39 +32,31 @@ struct PrayerTreeView: View {
                 }
                 .ignoresSafeArea()
 
-                // Stats pill
+                // Stats banner at top
                 VStack {
-                    HStack {
-                        Spacer()
-                        HStack(spacing: AppSpacing.md) {
-                            Label("\(viewModel.yearSessionCount)", systemImage: "figure.walk.motion")
-                                .font(AppFont.caption())
-                            Label("\(viewModel.stars.count)", systemImage: AppIcons.star)
-                                .font(AppFont.caption())
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, AppSpacing.md)
-                        .padding(.vertical, AppSpacing.xs)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(AppRadius.full)
-                        .padding(.trailing, AppSpacing.lg)
-                    }
+                    GameStatsBannerView(
+                        level: viewModel.level,
+                        xpProgress: viewModel.xpProgress,
+                        prayedItemCount: viewModel.prayedItemCount,
+                        intercessionPrayedCount: viewModel.intercessionPrayedCount,
+                        dropletCount: viewModel.dropletCount
+                    )
                     Spacer()
                 }
-                .padding(.top, 60)
+
             }
-            .navigationTitle("Prayer Tree")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingDecorationLibrary = true
-                    } label: {
-                        Image(systemName: AppIcons.decoration)
-                            .foregroundColor(Color.appPrimary)
-                    }
+            .overlay(alignment: .bottomLeading) {
+                Button {
+                    showingDecorationLibrary = true
+                } label: {
+                    decorationGiftBadge
                 }
+                .buttonStyle(.plain)
+                .padding(.leading, AppSpacing.lg)
+                .padding(.bottom, 80)
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear { viewModel.fetchTreeData() }
         .sheet(isPresented: $showingStarDetail) {
@@ -79,6 +71,37 @@ struct PrayerTreeView: View {
         .navigationDestination(isPresented: $showingDecorationLibrary) {
             DecorationLibraryView()
         }
+    }
+
+    /// White ring + 🎁; mint “Docoration” pill overlaps the bottom of the ring (reference-style).
+    private var decorationGiftBadge: some View {
+        VStack(spacing: -10) {
+            ZStack {
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.95), lineWidth: 2.5)
+                    .frame(width: 40, height: 40)
+                    .shadow(color: Color.white.opacity(0.55), radius: 4, y: 0)
+                    .shadow(color: Color.white.opacity(0.3), radius: 10, y: 0)
+
+                Text("🎁")
+                    .font(.system(size: 40))
+            }
+
+            Text("Docoration")
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .foregroundColor(Color(red: 0.14, green: 0.30, blue: 0.20))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule()
+                        .fill(Color(red: 0.70, green: 0.91, blue: 0.76).opacity(0.98))
+                )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
+                )
+        }
+        .accessibilityLabel("Decoration library")
     }
 
     // MARK: - Full Scene Canvas
@@ -117,7 +140,6 @@ struct PrayerTreeView: View {
         let cloudColor = Color.white.opacity(0.85)
 
         drawCloudBlob(ctx: ctx, cx: w * 0.20, cy: h * 0.10, rw: 50, rh: 22, color: cloudColor)
-        drawCloudBlob(ctx: ctx, cx: w * 0.75, cy: h * 0.08, rw: 60, rh: 25, color: cloudColor)
         drawCloudBlob(ctx: ctx, cx: w * 0.50, cy: h * 0.18, rw: 45, rh: 18, color: cloudColor)
         drawCloudBlob(ctx: ctx, cx: w * 0.88, cy: h * 0.22, rw: 38, rh: 16, color: cloudColor)
         drawCloudBlob(ctx: ctx, cx: w * 0.12, cy: h * 0.25, rw: 42, rh: 18, color: cloudColor)

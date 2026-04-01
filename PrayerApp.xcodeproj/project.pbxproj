@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		GA5E8B0112233445566778A1 /* GameStatsBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA5E8B0112233445566778A0 /* GameStatsBannerView.swift */; };
 		007A6651E23A0245598FE3CE /* SinglePrayerFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91344B8653BC19284E15F9AD /* SinglePrayerFlowView.swift */; };
 		05BA416DBEC7F9C76BCE9C0E /* PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFE24A41D119ED2DC947DC4A /* PreviewData.swift */; };
 		0A646B58BC944288E0DF95A8 /* ACTSStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4899DBA71C71D8A2E7447195 /* ACTSStepView.swift */; };
@@ -106,6 +107,7 @@
 		4A1C41DBFAEE079F27950B6B /* PrayerSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerSessionView.swift; sourceTree = "<group>"; };
 		52C30F30CF6645EC906006D4 /* PrayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerService.swift; sourceTree = "<group>"; };
 		5D172AA47222E0E83EA5EAFE /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
+		GA5E8B0112233445566778A0 /* GameStatsBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStatsBannerView.swift; sourceTree = "<group>"; };
 		616FE71CAB564CFC0C98025F /* Decoration+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Decoration+CoreDataClass.swift"; sourceTree = "<group>"; };
 		67C43FEB3C4D51897CB33D69 /* PrayerItemDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerItemDraft.swift; sourceTree = "<group>"; };
 		6D93168440E23827C3621819 /* ACTSFlowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACTSFlowViewModel.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 				A269C54EDDB4459D3022E83D /* PrayerCardView.swift */,
 				0C68DA0F3EFF57BE60F9FAB8 /* SessionCompleteView.swift */,
 				5D172AA47222E0E83EA5EAFE /* StatusIndicator.swift */,
+				GA5E8B0112233445566778A0 /* GameStatsBannerView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -502,6 +505,7 @@
 				FEFE57EAB3FDEAB1DFB48F4D /* SessionService.swift in Sources */,
 				007A6651E23A0245598FE3CE /* SinglePrayerFlowView.swift in Sources */,
 				A6ECE7F614057BFC7E94E56A /* StatusIndicator.swift in Sources */,
+				GA5E8B0112233445566778A1 /* GameStatsBannerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
