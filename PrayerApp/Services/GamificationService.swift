@@ -91,6 +91,84 @@ final class GamificationService: ObservableObject {
         return (try? context.count(for: request)) ?? 0
     }
 
+    // MARK: - Prayer Counts
+
+    /// Personal prayer items that have been prayed at least once.
+    func getPrayedItemCount() -> Int {
+        let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
+        request.predicate = NSPredicate(format: "isIntercessory == NO AND prayedCount > 0")
+        return (try? context.count(for: request)) ?? 0
+    }
+
+    /// Intercession items that have been prayed at least once.
+    func getIntercessionPrayedCount() -> Int {
+        let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
+        request.predicate = NSPredicate(format: "isIntercessory == YES AND prayedCount > 0")
+        return (try? context.count(for: request)) ?? 0
+    }
+
+    /// Total prayer duration across all sessions, in seconds.
+    func getTotalPrayerDuration() -> Float {
+        let request: NSFetchRequest<PrayerSession> = PrayerSession.fetchRequest()
+        guard let sessions = try? context.fetch(request) else { return 0 }
+        return sessions.reduce(0) { $0 + $1.duration }
+    }
+
+    /// Total days with hasFootprint (days the user actually prayed).
+    func getTotalPrayerDays() -> Int {
+        let request: NSFetchRequest<DailyRecord> = DailyRecord.fetchRequest()
+        request.predicate = NSPredicate(format: "hasFootprint == YES")
+        return (try? context.count(for: request)) ?? 0
+    }
+
+    // MARK: - Level Calculation
+
+    /// XP is earned from sessions, streaks, and answered prayers.
+    /// Level grows progressively: Level = floor(sqrt(XP / 20)) + 1
+    ///
+    /// XP sources:
+    ///   - Each completed session:   10 XP
+    ///   - Current streak day bonus: 5 XP per streak day (e.g. 7-day streak = 35 XP)
+    ///   - Each answered prayer:     25 XP
+    func calculateXP() -> Int {
+        let sessions = getTotalSessionCount()
+        let streak = getStreakCount()
+        let answered = getTotalAnsweredCount()
+        return sessions * 10 + streak * 5 + answered * 25
+    }
+
+    func calculateLevel() -> Int {
+        let xp = calculateXP()
+        return max(1, Int(sqrt(Double(xp) / 20.0)) + 1)
+    }
+
+    /// XP needed to reach the next level.
+    func xpForLevel(_ level: Int) -> Int {
+        let l = max(level - 1, 0)
+        return l * l * 20
+    }
+
+    // MARK: - Droplet Calculation
+
+    /// Droplets accumulate from prayer activity:
+    ///   - Each prayer day:         10 base droplets
+    ///   - Consecutive day bonus:   streak * (streak + 1) / 2  (triangular: 1+2+3+...)
+    ///   - Prayer duration:         1 droplet per 30 seconds
+    ///   - Answered prayers:        5 droplets each
+    func calculateDroplets() -> Int {
+        let prayerDays = getTotalPrayerDays()
+        let streak = getStreakCount()
+        let duration = getTotalPrayerDuration()
+        let answered = getTotalAnsweredCount()
+
+        let baseDrop = prayerDays * 10
+        let streakBonus = streak * (streak + 1) / 2
+        let durationBonus = Int(duration / 30.0)
+        let answeredBonus = answered * 5
+
+        return baseDrop + streakBonus + durationBonus + answeredBonus
+    }
+
     // MARK: - Decoration Unlocks
 
     @discardableResult
