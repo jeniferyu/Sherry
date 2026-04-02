@@ -22,6 +22,15 @@ struct PrayerChallenge {
     var completedDays: Int { days.filter(\.isCompleted).count }
     var totalStars: Int { days.reduce(0) { $0 + $1.starRating } }
     var maxStars: Int { totalDays * 3 }
+    var isFullyCompleted: Bool { completedDays >= totalDays }
+}
+
+struct ChallengeTier: Identifiable {
+    let id: Int          // totalDays as unique key
+    let totalDays: Int
+    let title: String
+    let isUnlocked: Bool
+    let isCompleted: Bool
 }
 
 // MARK: - ViewModel
@@ -31,10 +40,15 @@ final class RoadMapViewModel: ObservableObject {
     private let gamificationService: GamificationService
     private let sessionService: SessionService
 
+    static let allTiers = [3, 7, 14, 21]
+
     @Published var challenge: PrayerChallenge = PrayerChallenge(
         totalDays: 3, title: "3-Day Prayer Challenge", days: []
     )
     @Published var streakCount: Int = 0
+    @Published var challengeTiers: [ChallengeTier] = []
+    @Published var activeTierDays: Int = 3
+    @Published var currentChallengeInProgress: Bool = true
 
     // Banner stats
     @Published var level: Int = 1
@@ -45,17 +59,35 @@ final class RoadMapViewModel: ObservableObject {
     @Published var intercessionPrayedCount: Int = 0
     @Published var dropletCount: Int = 0
 
+    // Progress summary
+    @Published var totalChallengesCompleted: Int = 0
+    @Published var totalStarsEarned: Int = 0
+    @Published var totalPrayerDays: Int = 0
+
     init(
         gamificationService: GamificationService = GamificationService(),
         sessionService: SessionService = SessionService()
     ) {
         self.gamificationService = gamificationService
         self.sessionService = sessionService
+        self.activeTierDays = Self.loadActiveTier()
     }
 
     func fetchRecords() {
         streakCount = gamificationService.getStreakCount()
-        challenge = buildChallenge(totalDays: 3)
+
+        var completed = Self.loadCompletedTiers()
+        activeTierDays = Self.loadActiveTier()
+        challenge = buildChallenge(totalDays: activeTierDays)
+
+        // Auto-mark completion: if the active challenge is fully done, persist it
+        if challenge.isFullyCompleted && !completed.contains(activeTierDays) {
+            Self.markTierCompleted(activeTierDays)
+            completed = Self.loadCompletedTiers()
+        }
+
+        currentChallengeInProgress = !challenge.isFullyCompleted
+        challengeTiers = buildTiers(completedTiers: completed, challengeInProgress: currentChallengeInProgress)
 
         level = gamificationService.calculateLevel()
         currentXP = gamificationService.calculateXP()
@@ -66,7 +98,63 @@ final class RoadMapViewModel: ObservableObject {
         prayedItemCount = gamificationService.getPrayedItemCount()
         intercessionPrayedCount = gamificationService.getIntercessionPrayedCount()
         dropletCount = gamificationService.calculateDroplets()
+
+        totalPrayerDays = gamificationService.getTotalPrayerDays()
+        let completedSet = Self.loadCompletedTiers()
+        totalChallengesCompleted = completedSet.count
+
+        var allStars = challenge.totalStars
+        for tier in completedSet where tier != activeTierDays {
+            let past = buildChallenge(totalDays: tier)
+            allStars += past.totalStars
+        }
+        totalStarsEarned = allStars
     }
+
+    func selectChallenge(_ tier: Int) {
+        guard challengeTiers.first(where: { $0.totalDays == tier })?.isUnlocked == true else { return }
+        Self.saveActiveTier(tier)
+        activeTierDays = tier
+        fetchRecords()
+    }
+
+    // MARK: - Challenge Tier Logic
+
+    /// Unlock rules for the "next challenge" picker:
+    /// - Challenge in progress → ALL tiers locked
+    /// - Challenge completed → unlock completed tiers + the next tier above the highest completed
+    private func buildTiers(completedTiers: Set<Int>, challengeInProgress: Bool) -> [ChallengeTier] {
+        let highestCompleted = Self.allTiers.last(where: { completedTiers.contains($0) })
+        let nextAboveHighest: Int? = {
+            guard let highest = highestCompleted else { return nil }
+            return Self.allTiers.first(where: { $0 > highest })
+        }()
+
+        return Self.allTiers.map { days in
+            let isCompleted = completedTiers.contains(days)
+            let isUnlocked: Bool
+
+            if challengeInProgress {
+                isUnlocked = false
+            } else if isCompleted {
+                isUnlocked = true
+            } else if days == nextAboveHighest {
+                isUnlocked = true
+            } else {
+                isUnlocked = false
+            }
+
+            return ChallengeTier(
+                id: days,
+                totalDays: days,
+                title: "\(days)-Day Challenge",
+                isUnlocked: isUnlocked,
+                isCompleted: isCompleted
+            )
+        }
+    }
+
+    // MARK: - Build Active Challenge
 
     private func buildChallenge(totalDays: Int) -> PrayerChallenge {
         let calendar = Calendar.current
@@ -74,7 +162,6 @@ final class RoadMapViewModel: ObservableObject {
 
         let startDate = challengeStartDate(streak: streakCount, totalDays: totalDays, today: today)
 
-        // Pre-fetch DailyRecords covering the challenge window
         let allRecords = gamificationService.fetchAllDailyRecords()
         let recordsByDay = Dictionary(uniqueKeysWithValues:
             allRecords.compactMap { r -> (Date, DailyRecord)? in
@@ -112,20 +199,12 @@ final class RoadMapViewModel: ObservableObject {
         return PrayerChallenge(totalDays: totalDays, title: "\(totalDays)-Day Prayer Challenge", days: days)
     }
 
-    /// Determines the start date of the current challenge window.
-    /// streak=0 or 1 → today is day 1 (fresh start or just started today).
-    /// streak=2 → yesterday is day 1, today is day 2.
-    /// streak>=totalDays → challenge is fully covered ending today.
     private func challengeStartDate(streak: Int, totalDays: Int, today: Date) -> Date {
         let calendar = Calendar.current
         let offset = min(max(streak - 1, 0), totalDays - 1)
         return calendar.date(byAdding: .day, value: -offset, to: today) ?? today
     }
 
-    /// Star rating for a day's sessions:
-    /// 1 star = at least one completed session
-    /// 2 stars = full ACTS (items covering all 4 categories)
-    /// 3 stars = full ACTS + at least one intercession item prayed
     private func starRating(for sessions: [PrayerSession]) -> Int {
         guard !sessions.isEmpty else { return 0 }
 
@@ -143,5 +222,30 @@ final class RoadMapViewModel: ObservableObject {
         if isFullACTS && hasIntercession { return 3 }
         if isFullACTS { return 2 }
         return 1
+    }
+
+    // MARK: - Persistence (UserDefaults)
+
+    private static let completedKey = "RoadMap_CompletedTiers"
+    private static let activeTierKey = "RoadMap_ActiveTier"
+
+    static func loadCompletedTiers() -> Set<Int> {
+        let arr = UserDefaults.standard.array(forKey: completedKey) as? [Int] ?? []
+        return Set(arr)
+    }
+
+    static func markTierCompleted(_ tier: Int) {
+        var set = loadCompletedTiers()
+        set.insert(tier)
+        UserDefaults.standard.set(Array(set), forKey: completedKey)
+    }
+
+    static func loadActiveTier() -> Int {
+        let val = UserDefaults.standard.integer(forKey: activeTierKey)
+        return val > 0 ? val : 3
+    }
+
+    static func saveActiveTier(_ tier: Int) {
+        UserDefaults.standard.set(tier, forKey: activeTierKey)
     }
 }
