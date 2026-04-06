@@ -13,9 +13,13 @@ struct PrayerTreeView: View {
                     let h = geo.size.height
 
                     ZStack {
-                        // Full scene canvas (sky, clouds, hills, tree, ground)
-                        sceneCanvas(growth: viewModel.treeGrowthFraction)
+                        // Sky + ground (tree is sprout asset)
+                        sceneCanvas()
                             .frame(width: w, height: h)
+
+                        cloudImageLayer(w: w, h: h)
+
+                        sproutTreeLayer(w: w, h: h, growth: viewModel.treeGrowthFraction)
 
                         // Stars in the sky region
                         ForEach(viewModel.stars) { star in
@@ -73,7 +77,7 @@ struct PrayerTreeView: View {
         }
     }
 
-    /// White ring + treasure chest asset; mint “Docoration” pill overlaps the bottom of the ring.
+    /// White ring + treasure chest asset; mint “Decoration” pill overlaps the bottom of the ring.
     private var decorationGiftBadge: some View {
         VStack(spacing: -10) {
             ZStack {
@@ -89,7 +93,7 @@ struct PrayerTreeView: View {
                     .frame(width: 55, height: 55)
             }
 
-            Text("Docoration")
+            Text("Decoration")
                 .font(.system(size: 8, weight: .bold, design: .rounded))
                 .foregroundColor(Color(red: 0.14, green: 0.30, blue: 0.20))
                 .padding(.horizontal, 9)
@@ -108,16 +112,13 @@ struct PrayerTreeView: View {
 
     // MARK: - Full Scene Canvas
 
-    private func sceneCanvas(growth: Double) -> some View {
+    private func sceneCanvas() -> some View {
         Canvas { ctx, size in
             let w = size.width
             let h = size.height
-            let g = max(0.02, growth)
 
             drawSky(ctx: ctx, w: w, h: h)
-            drawClouds(ctx: ctx, w: w, h: h)
             drawForeground(ctx: ctx, w: w, h: h)
-            drawTree(ctx: ctx, w: w, h: h, g: g)
         }
     }
 
@@ -136,35 +137,26 @@ struct PrayerTreeView: View {
         ))
     }
 
-    // MARK: - Clouds
+    // MARK: - Clouds (asset)
 
-    private func drawClouds(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
-        let cloudColor = Color.white.opacity(0.85)
-
-        drawCloudBlob(ctx: ctx, cx: w * 0.20, cy: h * 0.10, rw: 50, rh: 22, color: cloudColor)
-        drawCloudBlob(ctx: ctx, cx: w * 0.50, cy: h * 0.18, rw: 45, rh: 18, color: cloudColor)
-        drawCloudBlob(ctx: ctx, cx: w * 0.88, cy: h * 0.22, rw: 38, rh: 16, color: cloudColor)
-        drawCloudBlob(ctx: ctx, cx: w * 0.12, cy: h * 0.25, rw: 42, rh: 18, color: cloudColor)
+    private func cloudImageLayer(w: CGFloat, h: CGFloat) -> some View {
+        ZStack {
+            cloudAsset(width: w * 0.28, x: w * 0.20, y: h * 0.10, opacity: 0.92)
+            cloudAsset(width: w * 0.30, x: w * 0.50, y: h * 0.18, opacity: 0.88)
+            cloudAsset(width: w * 0.22, x: w * 0.88, y: h * 0.22, opacity: 0.90)
+            cloudAsset(width: w * 0.26, x: w * 0.12, y: h * 0.25, opacity: 0.85)
+        }
+        .frame(width: w, height: h)
+        .allowsHitTesting(false)
     }
 
-    private func drawCloudBlob(ctx: GraphicsContext, cx: CGFloat, cy: CGFloat,
-                                rw: CGFloat, rh: CGFloat, color: Color) {
-        let offsets: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
-            (0, 0, 1.0, 1.0),
-            (-0.6, -0.15, 0.75, 0.80),
-            (0.55, -0.10, 0.80, 0.85),
-            (-0.25, -0.35, 0.60, 0.65),
-            (0.30, -0.30, 0.65, 0.70),
-        ]
-        for (dx, dy, sw, sh) in offsets {
-            let rect = CGRect(
-                x: cx + dx * rw - rw * sw / 2,
-                y: cy + dy * rh - rh * sh / 2,
-                width: rw * sw,
-                height: rh * sh
-            )
-            ctx.fill(Path(ellipseIn: rect), with: .color(color))
-        }
+    private func cloudAsset(width: CGFloat, x: CGFloat, y: CGFloat, opacity: Double) -> some View {
+        Image("cloud")
+            .resizable()
+            .scaledToFit()
+            .frame(width: width)
+            .opacity(opacity)
+            .position(x: x, y: y)
     }
 
     // MARK: - Foreground Ground
@@ -192,111 +184,25 @@ struct PrayerTreeView: View {
         ))
     }
 
-    // MARK: - Tree
+    // MARK: - Sprout tree (asset)
 
-    private func drawTree(ctx: GraphicsContext, w: CGFloat, h: CGFloat, g: Double) {
-        let centerX = w / 2
-        let groundY = h * 0.70
+    /// Bottom of sprout aligns with the hill line (`h * 0.70`); width scales with prayer progress.
+    private func sproutTreeLayer(w: CGFloat, h: CGFloat, growth: Double) -> some View {
+        let g = max(0.02, min(1.0, growth))
+        let maxW = w * lerp(0.16, 0.38, g)
 
-        // Trunk
-        let maxTrunkH = h * 0.32
-        let maxTrunkW = w * 0.07
-        let trunkH = maxTrunkH * lerp(0.18, 1.0, g)
-        let trunkW = maxTrunkW * lerp(0.35, 1.0, g)
-        let trunkBottom = groundY
-        let trunkTop = trunkBottom - trunkH
-
-        let trunkColor = Color(red: 0.52, green: 0.36, blue: 0.20)
-        let trunkDark = Color(red: 0.40, green: 0.28, blue: 0.15)
-
-        // Main trunk (tapered)
-        var trunk = Path()
-        let topTaper: CGFloat = 0.35
-        trunk.move(to: CGPoint(x: centerX - trunkW / 2, y: trunkBottom))
-        trunk.addLine(to: CGPoint(x: centerX - trunkW * topTaper / 2, y: trunkTop))
-        trunk.addLine(to: CGPoint(x: centerX + trunkW * topTaper / 2, y: trunkTop))
-        trunk.addLine(to: CGPoint(x: centerX + trunkW / 2, y: trunkBottom))
-        trunk.closeSubpath()
-        ctx.fill(trunk, with: .color(trunkColor))
-
-        // Trunk shading (right side darker)
-        var trunkShade = Path()
-        trunkShade.move(to: CGPoint(x: centerX, y: trunkBottom))
-        trunkShade.addLine(to: CGPoint(x: centerX, y: trunkTop))
-        trunkShade.addLine(to: CGPoint(x: centerX + trunkW * topTaper / 2, y: trunkTop))
-        trunkShade.addLine(to: CGPoint(x: centerX + trunkW / 2, y: trunkBottom))
-        trunkShade.closeSubpath()
-        ctx.fill(trunkShade, with: .color(trunkDark.opacity(0.3)))
-
-        // Branches (when growth > 0.3)
-        if g > 0.3 {
-            let branchY = trunkTop + trunkH * 0.35
-            let branchLen = trunkW * lerp(1.0, 3.0, g)
-            let branchThick: CGFloat = lerp(1.5, 3.5, g)
-
-            // Left branch
-            var lb = Path()
-            lb.move(to: CGPoint(x: centerX - trunkW * 0.15, y: branchY))
-            lb.addLine(to: CGPoint(x: centerX - branchLen, y: branchY - trunkH * 0.12))
-            ctx.stroke(lb, with: .color(trunkColor), lineWidth: branchThick)
-
-            // Right branch
-            var rb = Path()
-            rb.move(to: CGPoint(x: centerX + trunkW * 0.15, y: branchY + trunkH * 0.05))
-            rb.addLine(to: CGPoint(x: centerX + branchLen * 0.8, y: branchY - trunkH * 0.08))
-            ctx.stroke(rb, with: .color(trunkColor), lineWidth: branchThick)
+        return VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Image("sprout")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: maxW)
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+            Spacer()
+                .frame(height: h * 0.30)
         }
-
-        // Canopy -- puffy overlapping circles like the reference image
-        let scale = lerp(0.25, 1.0, g)
-
-        let mainGreen = Color(red: 0.32, green: 0.62, blue: 0.30)
-        let lightGreen = Color(red: 0.40, green: 0.72, blue: 0.38)
-        let darkGreen = Color(red: 0.22, green: 0.48, blue: 0.22)
-
-        struct Blob {
-            let dx: CGFloat; let dy: CGFloat; let r: CGFloat; let color: Color
-            let minGrowth: Double
-        }
-
-        let canopyCenterY = trunkTop - h * 0.02 * scale
-
-        let blobs: [Blob] = [
-            // Bottom wide blobs
-            Blob(dx: -0.08, dy: 0.04, r: 0.14, color: mainGreen, minGrowth: 0.0),
-            Blob(dx: 0.09, dy: 0.05, r: 0.13, color: darkGreen, minGrowth: 0.0),
-            Blob(dx: 0.0, dy: 0.02, r: 0.12, color: lightGreen, minGrowth: 0.0),
-            // Middle blobs
-            Blob(dx: -0.06, dy: -0.04, r: 0.12, color: mainGreen, minGrowth: 0.15),
-            Blob(dx: 0.07, dy: -0.03, r: 0.11, color: lightGreen, minGrowth: 0.15),
-            Blob(dx: -0.11, dy: 0.0, r: 0.10, color: darkGreen, minGrowth: 0.25),
-            Blob(dx: 0.12, dy: 0.01, r: 0.10, color: mainGreen, minGrowth: 0.25),
-            // Upper blobs
-            Blob(dx: 0.0, dy: -0.08, r: 0.10, color: lightGreen, minGrowth: 0.35),
-            Blob(dx: -0.04, dy: -0.11, r: 0.08, color: mainGreen, minGrowth: 0.50),
-            Blob(dx: 0.05, dy: -0.10, r: 0.09, color: darkGreen, minGrowth: 0.45),
-            // Top crown
-            Blob(dx: 0.0, dy: -0.14, r: 0.07, color: lightGreen, minGrowth: 0.65),
-            Blob(dx: -0.02, dy: -0.17, r: 0.05, color: mainGreen, minGrowth: 0.80),
-        ]
-
-        for blob in blobs where g >= blob.minGrowth {
-            let bx = centerX + w * blob.dx * scale
-            let by = canopyCenterY + h * blob.dy * scale
-            let br = w * blob.r * scale
-
-            let rect = CGRect(x: bx - br, y: by - br, width: br * 2, height: br * 2)
-            ctx.fill(Path(ellipseIn: rect), with: .color(blob.color))
-
-            // Highlight on top-left
-            let hlRect = CGRect(x: bx - br * 0.5, y: by - br * 0.6, width: br * 0.8, height: br * 0.6)
-            ctx.fill(Path(ellipseIn: hlRect), with: .color(lightGreen.opacity(0.25)))
-        }
-
-        // Small ground shadow under tree
-        let shadowW = trunkW * 3.0 * scale
-        let shadowRect = CGRect(x: centerX - shadowW / 2, y: groundY - 3, width: shadowW, height: 8)
-        ctx.fill(Path(ellipseIn: shadowRect), with: .color(Color.black.opacity(0.08)))
+        .frame(width: w, height: h)
+        .allowsHitTesting(false)
     }
 
     private func lerp(_ a: Double, _ b: Double, _ t: Double) -> CGFloat {
