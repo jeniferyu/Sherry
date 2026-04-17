@@ -3,78 +3,84 @@ import SwiftUI
 struct PrayerTreeView: View {
     @StateObject private var viewModel = PrayerTreeViewModel()
     @State private var showingStarDetail = false
-    @State private var showingDecorationLibrary = false
+    @State private var showingInventory = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                GeometryReader { geo in
-                    let w = geo.size.width
-                    let h = geo.size.height
+        ZStack {
+            NavigationStack {
+                ZStack {
+                    GeometryReader { geo in
+                        let w = geo.size.width
+                        let h = geo.size.height
 
-                    ZStack {
-                        // Sky + ground (tree is sprout asset)
-                        sceneCanvas()
-                            .frame(width: w, height: h)
+                        ZStack {
+                            // Sky + ground (tree is sprout asset)
+                            sceneCanvas()
+                                .frame(width: w, height: h)
 
-                        cloudImageLayer(w: w, h: h)
+                            cloudImageLayer(w: w, h: h)
 
-                        sproutTreeLayer(w: w, h: h, growth: viewModel.treeGrowthFraction)
+                            sproutTreeLayer(w: w, h: h, growth: viewModel.treeGrowthFraction)
 
-                        // Stars in the sky region
-                        ForEach(viewModel.stars) { star in
-                            StarNodeView(star: star) {
-                                viewModel.selectStar(star)
-                                showingStarDetail = true
+                            // Stars in the sky region
+                            ForEach(viewModel.stars) { star in
+                                StarNodeView(star: star) {
+                                    viewModel.selectStar(star)
+                                    showingStarDetail = true
+                                }
+                                .position(
+                                    x: star.position.x * w,
+                                    y: star.position.y * h * 0.30
+                                )
                             }
-                            .position(
-                                x: star.position.x * w,
-                                y: star.position.y * h * 0.30
-                            )
                         }
                     }
-                }
-                .ignoresSafeArea()
+                    .ignoresSafeArea()
 
-                // Stats banner at top
-                VStack {
-                    GameStatsBannerView(
-                        level: viewModel.level,
-                        xpProgress: viewModel.xpProgress,
-                        prayedItemCount: viewModel.prayedItemCount,
-                        intercessionPrayedCount: viewModel.intercessionPrayedCount,
-                        dropletCount: viewModel.dropletCount
-                    )
-                    Spacer()
+                    // Stats banner at top
+                    VStack {
+                        GameStatsBannerView(
+                            level: viewModel.level,
+                            xpProgress: viewModel.xpProgress,
+                            prayedItemCount: viewModel.prayedItemCount,
+                            intercessionPrayedCount: viewModel.intercessionPrayedCount,
+                            dropletCount: viewModel.dropletCount
+                        )
+                        Spacer()
+                    }
                 }
+                .overlay(alignment: .bottomLeading) {
+                    Button {
+                        showingInventory = true
+                    } label: {
+                        decorationGiftBadge
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, AppSpacing.lg)
+                    .padding(.bottom, 80)
+                }
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .onAppear { viewModel.fetchTreeData() }
+            .sheet(isPresented: $showingStarDetail) {
+                if let star = viewModel.selectedStar {
+                    StarDetailSheet(star: star, onDismiss: {
+                        showingStarDetail = false
+                        viewModel.clearSelection()
+                    })
+                    .presentationDetents([.medium])
+                }
+            }
 
-            }
-            .overlay(alignment: .bottomLeading) {
-                Button {
-                    showingDecorationLibrary = true
-                } label: {
-                    decorationGiftBadge
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, AppSpacing.lg)
-                .padding(.bottom, 80)
-            }
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .navigationBarTitleDisplayMode(.inline)
-        }
-        .onAppear { viewModel.fetchTreeData() }
-        .sheet(isPresented: $showingStarDetail) {
-            if let star = viewModel.selectedStar {
-                StarDetailSheet(star: star, onDismiss: {
-                    showingStarDetail = false
-                    viewModel.clearSelection()
-                })
-                .presentationDetents([.medium])
+            // ── Inventory overlay (above navigation chrome) ───────────────
+            if showingInventory {
+                InventoryView(isPresented: $showingInventory)
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                    .zIndex(10)
             }
         }
-        .navigationDestination(isPresented: $showingDecorationLibrary) {
-            DecorationLibraryView()
-        }
+        .animation(.spring(response: 0.30, dampingFraction: 0.82), value: showingInventory)
     }
 
     /// White ring + treasure chest asset; mint “Decoration” pill overlaps the bottom of the ring.
