@@ -42,6 +42,10 @@ final class RoadMapViewModel: ObservableObject {
 
     static let allTiers = [3, 7, 14, 21]
 
+    /// Temporary testing only — set to `false` before shipping.
+    /// When `true`, every challenge tier in the picker is unlocked and tappable so you can exercise 3/7/14/21-day UI without meeting normal progress rules.
+    private static let unlockAllChallengeTiersForTesting = true
+
     @Published var challenge: PrayerChallenge = PrayerChallenge(
         totalDays: 3, title: "3-Day Prayer Challenge", days: []
     )
@@ -112,10 +116,24 @@ final class RoadMapViewModel: ObservableObject {
     }
 
     func selectChallenge(_ tier: Int) {
-        guard challengeTiers.first(where: { $0.totalDays == tier })?.isUnlocked == true else { return }
+        // Temporary testing only: skip unlock guard when `unlockAllChallengeTiersForTesting` is true.
+        if !Self.unlockAllChallengeTiersForTesting {
+            guard challengeTiers.first(where: { $0.totalDays == tier })?.isUnlocked == true else { return }
+        }
         Self.saveActiveTier(tier)
         activeTierDays = tier
         fetchRecords()
+    }
+
+    // MARK: - Scroll Focus
+
+    /// Index of the day to center on initial map scroll.
+    /// Returns the current day index if one exists, otherwise the last completed index,
+    /// otherwise 0 (Day 1 — the start of a brand-new challenge).
+    var focusDayIndex: Int {
+        if let i = challenge.days.firstIndex(where: { $0.isCurrent }) { return i }
+        if let i = challenge.days.lastIndex(where: { $0.isCompleted }) { return i }
+        return 0
     }
 
     // MARK: - Challenge Tier Logic
@@ -124,8 +142,9 @@ final class RoadMapViewModel: ObservableObject {
     /// - Challenge in progress → ALL tiers locked
     /// - Challenge completed → unlock completed tiers + the next tier above the highest completed
     private func buildTiers(completedTiers: Set<Int>, challengeInProgress: Bool) -> [ChallengeTier] {
-        let highestCompleted = Self.allTiers.last(where: { completedTiers.contains($0) })
         let nextAboveHighest: Int? = {
+            guard !Self.unlockAllChallengeTiersForTesting else { return nil }
+            let highestCompleted = Self.allTiers.last(where: { completedTiers.contains($0) })
             guard let highest = highestCompleted else { return nil }
             return Self.allTiers.first(where: { $0 > highest })
         }()
@@ -134,7 +153,10 @@ final class RoadMapViewModel: ObservableObject {
             let isCompleted = completedTiers.contains(days)
             let isUnlocked: Bool
 
-            if challengeInProgress {
+            // Temporary testing only: replace normal unlock rules with “all unlocked.” Revert by deleting this branch and restoring the `if challengeInProgress { … }` chain below.
+            if Self.unlockAllChallengeTiersForTesting {
+                isUnlocked = true
+            } else if challengeInProgress {
                 isUnlocked = false
             } else if isCompleted {
                 isUnlocked = true

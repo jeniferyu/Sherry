@@ -1,75 +1,162 @@
 import SwiftUI
+import UIKit
 
 struct RoadMapView: View {
     @StateObject private var viewModel = RoadMapViewModel()
 
-    private let mapHeight: CGFloat = 650
     private let nodeSpacingY: CGFloat = 140
+    /// Desired number of nodes visible per screen height on multi-day challenges.
+    private let nodesPerScreen: CGFloat = 3.0
+
+    /// 0 = top (challenge picker), 1 = main (road map), 2 = bottom (summary)
+    @State private var currentPage: Int = 1
+    @State private var dragOffset: CGFloat = 0
+    private let snapThreshold: CGFloat = 50
+
+    /// How far the map must be dragged beyond its top/bottom boundary before the
+    /// outer section transition takes over.
+    private let mapBoundaryDragTrigger: CGFloat = 44
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.35, green: 0.55, blue: 0.35),
-                        Color(red: 0.42, green: 0.62, blue: 0.38),
-                        Color(red: 0.48, green: 0.68, blue: 0.42),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+            GeometryReader { geo in
+                let pageHeight = geo.size.height
+                // Each page slot = pageHeight + one 1.5pt divider; stride must match
+                // so page 1 and page 2 align precisely to viewport boundaries.
+                let pageStride = pageHeight + 1.5
 
-                ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            // --- TOP: Choose Your Next Challenge ---
-                            challengePickerSection
-                                .id("top")
-
-                            roadSectionDivider(topPadding: 20, bottomPadding: 0)
-
-                            // --- MIDDLE: Current Challenge Map ---
-                            currentChallengeMap
-                                .id("map")
-
-                            roadSectionDivider(topPadding: 0, bottomPadding: 20)
-
-                            // --- BOTTOM: Progress Summary ---
-                            progressSummarySection
-                                .id("bottom")
-                        }
-                    }
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                            proxy.scrollTo("map", anchor: .center)
-                        }
-                    }
-                }
-
-                // Stats banner pinned at top
-                VStack {
-                    GameStatsBannerView(
-                        level: viewModel.level,
-                        xpProgress: viewModel.xpProgress,
-                        prayedItemCount: viewModel.prayedItemCount,
-                        intercessionPrayedCount: viewModel.intercessionPrayedCount,
-                        dropletCount: viewModel.dropletCount
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.35, green: 0.55, blue: 0.35),
+                            Color(red: 0.42, green: 0.62, blue: 0.38),
+                            Color(red: 0.48, green: 0.68, blue: 0.42),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                    Spacer()
+                    .ignoresSafeArea()
+
+                    let mHeight = mapContentHeight(pageHeight: pageHeight)
+
+                    VStack(spacing: 0) {
+                        // Page 0: Top
+                        challengePickerPage(height: pageHeight)
+                            .frame(height: pageHeight)
+
+                        roadSectionDivider(topPadding: 0, bottomPadding: 0)
+
+                        // Page 1: Main map
+                        mainMapPage(height: pageHeight, mapHeight: mHeight)
+                            .frame(height: pageHeight)
+
+                        roadSectionDivider(topPadding: 0, bottomPadding: 0)
+
+                        // Page 2: Bottom
+                        progressSummaryPage(height: pageHeight)
+                            .frame(height: pageHeight)
+                    }
+                    .offset(y: -CGFloat(currentPage) * pageStride + dragOffset)
+                    .animation(.spring(response: 0.45, dampingFraction: 0.86), value: currentPage)
+                    .gesture(
+                        DragGesture(minimumDistance: 12)
+                            .onChanged { value in
+                                dragOffset = value.translation.height
+                            }
+                            .onEnded { value in
+                                let drag = value.translation.height
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                                    if drag < -snapThreshold && currentPage < 2 {
+                                        currentPage += 1
+                                    } else if drag > snapThreshold && currentPage > 0 {
+                                        currentPage -= 1
+                                    }
+                                    dragOffset = 0
+                                }
+                            },
+                        // Disable inter-section snap when on the scrollable map so the
+                        // inner ScrollView receives vertical drag events instead.
+                        including: (currentPage == 1 && mapNeedsScroll) ? .none : .all
+                    )
+
+                    // Stats banner pinned at top
+                    VStack {
+                        GameStatsBannerView(
+                            level: viewModel.level,
+                            xpProgress: viewModel.xpProgress,
+                            prayedItemCount: viewModel.prayedItemCount,
+                            intercessionPrayedCount: viewModel.intercessionPrayedCount,
+                            dropletCount: viewModel.dropletCount
+                        )
+                        Spacer()
+                    }
+
+                    // Page indicator
+                    VStack {
+                        Spacer()
+                        pageIndicator
+                            .padding(.bottom, 90)
+                    }
                 }
             }
+            .ignoresSafeArea(edges: .bottom)
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear { viewModel.fetchRecords() }
     }
 
+    // MARK: - Page indicator
+
+    private var pageIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<3, id: \.self) { i in
+                Button {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                        currentPage = i
+                    }
+                } label: {
+                    Circle()
+                        .fill(i == currentPage ? Color.white : Color.white.opacity(0.3))
+                        .frame(width: i == currentPage ? 8 : 6, height: i == currentPage ? 8 : 6)
+                        .animation(.easeInOut(duration: 0.2), value: currentPage)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Full-Page Wrappers
+
+    private func challengePickerPage(height: CGFloat) -> some View {
+        challengePickerSection
+            .frame(maxWidth: .infinity, minHeight: height, alignment: .top)
+            .clipped()
+    }
+
+    private func mainMapPage(height: CGFloat, mapHeight: CGFloat) -> some View {
+        GeometryReader { inner in
+            let w = inner.size.width
+            if mapHeight > height {
+                boundaryAwareScrollableMap(w: w, height: height, mapHeight: mapHeight)
+            } else {
+                mapCanvas(w: w, h: height, pageHeight: height)
+                    .clipped()
+            }
+        }
+    }
+
+    private func progressSummaryPage(height: CGFloat) -> some View {
+        progressSummarySection
+            .frame(maxWidth: .infinity, minHeight: height, alignment: .top)
+            .clipped()
+    }
+
     // MARK: - Challenge Picker (Top Section)
 
     private var challengePickerSection: some View {
         VStack(spacing: AppSpacing.lg) {
-            Spacer().frame(height: 80) //80
+            Spacer().frame(maxHeight: 100)
 
             Text("UP NEXT")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -82,11 +169,14 @@ struct RoadMapView: View {
             Text("Choose Your Next Challenge")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
+                .minimumScaleFactor(0.85)
+                .lineLimit(2)
 
             if viewModel.currentChallengeInProgress {
                 Text("Complete your current challenge to unlock choices")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.5))
+                    .minimumScaleFactor(0.85)
                     .multilineTextAlignment(.center)
             }
 
@@ -96,6 +186,7 @@ struct RoadMapView: View {
                 }
             }
             .padding(.horizontal, AppSpacing.lg)
+            .layoutPriority(1)
         }
         .padding(.bottom, AppSpacing.sm)
     }
@@ -103,6 +194,9 @@ struct RoadMapView: View {
     private func challengeTierCard(_ tier: ChallengeTier) -> some View {
         Button {
             viewModel.selectChallenge(tier.totalDays)
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                currentPage = 1
+            }
         } label: {
             HStack(spacing: AppSpacing.md) {
                 ZStack {
@@ -168,71 +262,122 @@ struct RoadMapView: View {
         return "Tap to start this challenge"
     }
 
-    // MARK: - Current Challenge Map (Middle Section)
+    // MARK: - Map Canvas (shared by static and scrollable paths)
 
-    private var dynamicMapHeight: CGFloat {
-        let count = max(viewModel.challenge.days.count, 3)
-        return CGFloat(count) * nodeSpacingY + 315
-    }
-
-    private var currentChallengeMap: some View {
+    private func mapCanvas(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> some View {
         ZStack {
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
+            groundDecor(w: w, h: h)
 
-                ZStack {
-                    groundDecor(w: w, h: h)
+            dynamicWindingPath(w: w, h: h, pageHeight: pageHeight)
+                .stroke(
+                    Color(red: 0.75, green: 0.65, blue: 0.50),
+                    style: StrokeStyle(lineWidth: 28, lineCap: .round, lineJoin: .round)
+                )
 
-                    dynamicWindingPath(w: w, h: h)
-                        .stroke(
-                            Color(red: 0.75, green: 0.65, blue: 0.50),
-                            style: StrokeStyle(lineWidth: 28, lineCap: .round, lineJoin: .round)
-                        )
+            dynamicWindingPath(w: w, h: h, pageHeight: pageHeight)
+                .stroke(
+                    Color(red: 0.85, green: 0.78, blue: 0.62),
+                    style: StrokeStyle(lineWidth: 18, lineCap: .round, lineJoin: .round)
+                )
 
-                    dynamicWindingPath(w: w, h: h)
-                        .stroke(
-                            Color(red: 0.85, green: 0.78, blue: 0.62),
-                            style: StrokeStyle(lineWidth: 18, lineCap: .round, lineJoin: .round)
-                        )
+            let positions = dynamicNodePositions(w: w, h: h, pageHeight: pageHeight)
+            let days = viewModel.challenge.days
 
-                    let positions = dynamicNodePositions(w: w, h: h)
-                    let days = viewModel.challenge.days
+            ForEach(days) { day in
+                if day.id < positions.count {
+                    let pos = positions[day.id]
 
-                    ForEach(days) { day in
-                        if day.id < positions.count {
-                            let pos = positions[day.id]
+                    nodeView(day: day)
+                        .id("day_\(day.id)")
+                        .position(pos)
 
-                            nodeView(day: day)
-                                .position(pos)
-
-                            starsArcAroundNode(count: day.starRating, center: pos)
-                        }
-                    }
+                    starsArcAroundNode(count: day.starRating, center: pos)
                 }
             }
         }
-        .frame(height: dynamicMapHeight)
-        .clipped()
+        .frame(width: w, height: h)
+    }
+
+    // MARK: - Scrollable Map
+
+    /// True whenever the challenge has more days than can comfortably fit on one screen.
+    private var mapNeedsScroll: Bool {
+        viewModel.challenge.days.count > 3
+    }
+
+    /// Total canvas height for the map, accounting for fixed per-node spacing on long challenges.
+    private func mapContentHeight(pageHeight: CGFloat) -> CGFloat {
+        let count = viewModel.challenge.days.count
+        guard count > 3 else { return pageHeight }
+        let spacing = pageHeight / nodesPerScreen
+        // top padding + (count-1) gaps + bottom padding
+        return spacing * 0.8 + CGFloat(count - 1) * spacing + spacing * 0.9
+    }
+
+    private func boundaryAwareScrollableMap(w: CGFloat, height: CGFloat, mapHeight: CGFloat) -> some View {
+        let focusOffset = mapFocusOffset(pageHeight: height, mapHeight: mapHeight)
+        let scrollResetID = viewModel.challenge.totalDays * 1_000 + viewModel.focusDayIndex
+
+        return BoundaryAwareMapScrollView(
+            contentHeight: mapHeight,
+            targetOffsetY: focusOffset,
+            resetID: scrollResetID,
+            transitionThreshold: mapBoundaryDragTrigger,
+            onPullPastTop: {
+                guard currentPage > 0 else { return }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                    currentPage -= 1
+                }
+            },
+            onPullPastBottom: {
+                guard currentPage < 2 else { return }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                    currentPage += 1
+                }
+            }
+        ) {
+            mapCanvas(w: w, h: mapHeight, pageHeight: height)
+        }
+    }
+
+    private func mapFocusOffset(pageHeight: CGFloat, mapHeight: CGFloat) -> CGFloat {
+        let positions = dynamicNodePositions(w: 1, h: mapHeight, pageHeight: pageHeight)
+        guard positions.indices.contains(viewModel.focusDayIndex) else { return 0 }
+
+        let centeredOffset = positions[viewModel.focusDayIndex].y - pageHeight / 2
+        return min(max(centeredOffset, 0), max(mapHeight - pageHeight, 0))
     }
 
     // MARK: - Dynamic Node Positions
 
-    private func dynamicNodePositions(w: CGFloat, h: CGFloat) -> [CGPoint] {
+    private func dynamicNodePositions(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> [CGPoint] {
         let count = viewModel.challenge.days.count
         guard count > 0 else { return [] }
 
         var positions: [CGPoint] = []
-        let topPadding: CGFloat = 170
-        let bottomPadding: CGFloat = 150
+        let xCenter = w * 0.5
+        let xAmplitude = w * 0.20
 
-        for i in 0..<count {
-            let progress = count == 1 ? 0.5 : CGFloat(i) / CGFloat(count - 1)
-            let y = h - bottomPadding - progress * (h - topPadding - bottomPadding)
-            let xCenter = w * 0.5
-            let xAmplitude = w * 0.20
-            let x = xCenter + xAmplitude * (i % 2 == 0 ? -1 : 1)
-            positions.append(CGPoint(x: x, y: y))
+        if count <= 3 {
+            // Proportional layout: spread nodes across the full page height.
+            let topPadding: CGFloat = h * 0.22
+            let bottomPadding: CGFloat = h * 0.25
+            for i in 0..<count {
+                let progress = count == 1 ? 0.5 : CGFloat(i) / CGFloat(count - 1)
+                let y = h - bottomPadding - progress * (h - topPadding - bottomPadding)
+                let x = xCenter + xAmplitude * (i % 2 == 0 ? -1 : 1)
+                positions.append(CGPoint(x: x, y: y))
+            }
+        } else {
+            // Fixed spacing: one node slot per (pageHeight / nodesPerScreen).
+            // i=0 → Day 1 near the bottom of the canvas; i=count-1 → Day N near the top.
+            let spacing = pageHeight / nodesPerScreen
+            let bottomPad = spacing * 0.9
+            for i in 0..<count {
+                let y = h - bottomPad - CGFloat(i) * spacing
+                let x = xCenter + xAmplitude * (i % 2 == 0 ? -1 : 1)
+                positions.append(CGPoint(x: x, y: y))
+            }
         }
         return positions
     }
@@ -243,15 +388,15 @@ struct RoadMapView: View {
     private let roadCurveHandleFraction: CGFloat = 0.42
     private let roadCurveHandleMax: CGFloat = 100
 
-    private func dynamicWindingPath(w: CGFloat, h: CGFloat) -> Path {
-        let pts = dynamicNodePositions(w: w, h: h)
+    private func dynamicWindingPath(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> Path {
+        let pts = dynamicNodePositions(w: w, h: h, pageHeight: pageHeight)
         var path = Path()
         guard !pts.isEmpty else { return path }
 
         let center = w * 0.5
         let entry = CGPoint(x: center, y: h + 30)
         let exit = CGPoint(x: center, y: -30)
-        var waypoints: [CGPoint] = [entry] + pts + [exit]
+        let waypoints: [CGPoint] = [entry] + pts + [exit]
 
         path.move(to: waypoints[0])
 
@@ -427,6 +572,7 @@ struct RoadMapView: View {
 
     private var progressSummarySection: some View {
         VStack(spacing: AppSpacing.lg) {
+            Spacer().frame(maxHeight: 100)
             Text("YOUR JOURNEY")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .tracking(1.5)
@@ -462,6 +608,7 @@ struct RoadMapView: View {
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
             )
             .padding(.horizontal, AppSpacing.lg)
+            .layoutPriority(1)
 
             Text("Keep praying — your journey continues!")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
@@ -469,9 +616,8 @@ struct RoadMapView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, AppSpacing.sm)
 
-            Spacer().frame(height: 100)
+            Spacer(minLength: 0)
         }
-        .padding(.top, AppSpacing.lg)
     }
 
     private func summaryStatRow(icon: String, color: Color, label: String, value: String) -> some View {
@@ -485,12 +631,173 @@ struct RoadMapView: View {
             Text(label)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundColor(.white.opacity(0.8))
+                .minimumScaleFactor(0.85)
+                .lineLimit(1)
 
             Spacer()
 
             Text(value)
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
+                .minimumScaleFactor(0.85)
+                .lineLimit(1)
+        }
+    }
+}
+
+// MARK: - UIKit-backed nested scroll handoff
+
+private struct BoundaryAwareMapScrollView<Content: View>: UIViewRepresentable {
+    let contentHeight: CGFloat
+    let targetOffsetY: CGFloat
+    let resetID: Int
+    let transitionThreshold: CGFloat
+    let onPullPastTop: () -> Void
+    let onPullPastBottom: () -> Void
+    let content: Content
+
+    init(
+        contentHeight: CGFloat,
+        targetOffsetY: CGFloat,
+        resetID: Int,
+        transitionThreshold: CGFloat,
+        onPullPastTop: @escaping () -> Void,
+        onPullPastBottom: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.contentHeight = contentHeight
+        self.targetOffsetY = targetOffsetY
+        self.resetID = resetID
+        self.transitionThreshold = transitionThreshold
+        self.onPullPastTop = onPullPastTop
+        self.onPullPastBottom = onPullPastBottom
+        self.content = content()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            threshold: transitionThreshold,
+            onPullPastTop: onPullPastTop,
+            onPullPastBottom: onPullPastBottom
+        )
+    }
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.delegate = context.coordinator
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.alwaysBounceVertical = true
+        scrollView.bounces = true
+        scrollView.backgroundColor = .clear
+        scrollView.contentInsetAdjustmentBehavior = .never
+
+        let hostView = context.coordinator.hostingController.view!
+        hostView.backgroundColor = .clear
+        hostView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(hostView)
+
+        NSLayoutConstraint.activate([
+            hostView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            hostView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            hostView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            hostView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            hostView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor)
+        ])
+
+        context.coordinator.heightConstraint = hostView.heightAnchor.constraint(equalToConstant: contentHeight)
+        context.coordinator.heightConstraint?.isActive = true
+
+        return scrollView
+    }
+
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        context.coordinator.threshold = transitionThreshold
+        context.coordinator.onPullPastTop = onPullPastTop
+        context.coordinator.onPullPastBottom = onPullPastBottom
+        context.coordinator.hostingController.rootView = AnyView(content)
+        context.coordinator.heightConstraint?.constant = contentHeight
+
+        if context.coordinator.lastAppliedResetID != resetID {
+            context.coordinator.lastAppliedResetID = resetID
+            context.coordinator.setProgrammaticOffset(targetOffsetY, on: scrollView)
+        } else {
+            context.coordinator.refreshContentSize(on: scrollView)
+        }
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate {
+        let hostingController = UIHostingController(rootView: AnyView(EmptyView()))
+        var heightConstraint: NSLayoutConstraint?
+        var threshold: CGFloat
+        var onPullPastTop: () -> Void
+        var onPullPastBottom: () -> Void
+        var didTriggerBoundaryTransition = false
+        var isProgrammaticScroll = false
+        var lastAppliedResetID: Int?
+
+        init(
+            threshold: CGFloat,
+            onPullPastTop: @escaping () -> Void,
+            onPullPastBottom: @escaping () -> Void
+        ) {
+            self.threshold = threshold
+            self.onPullPastTop = onPullPastTop
+            self.onPullPastBottom = onPullPastBottom
+        }
+
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard scrollView.isDragging, !didTriggerBoundaryTransition, !isProgrammaticScroll else {
+                return
+            }
+
+            let topLimit = -scrollView.adjustedContentInset.top
+            let bottomLimit = max(
+                scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom,
+                topLimit
+            )
+            let translationY = scrollView.panGestureRecognizer.translation(in: scrollView).y
+
+            if scrollView.contentOffset.y <= topLimit, translationY > threshold {
+                scrollView.contentOffset.y = topLimit
+                didTriggerBoundaryTransition = true
+                onPullPastTop()
+            } else if scrollView.contentOffset.y >= bottomLimit, translationY < -threshold {
+                scrollView.contentOffset.y = bottomLimit
+                didTriggerBoundaryTransition = true
+                onPullPastBottom()
+            }
+        }
+
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate {
+                didTriggerBoundaryTransition = false
+            }
+        }
+
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            didTriggerBoundaryTransition = false
+        }
+
+        func setProgrammaticOffset(_ y: CGFloat, on scrollView: UIScrollView) {
+            DispatchQueue.main.async {
+                self.refreshContentSize(on: scrollView)
+                let maxOffsetY = max(scrollView.contentSize.height - scrollView.bounds.height, 0)
+                let clampedY = min(max(y, 0), maxOffsetY)
+                self.isProgrammaticScroll = true
+                scrollView.setContentOffset(CGPoint(x: 0, y: clampedY), animated: false)
+                self.didTriggerBoundaryTransition = false
+                DispatchQueue.main.async {
+                    self.isProgrammaticScroll = false
+                }
+            }
+        }
+
+        func refreshContentSize(on scrollView: UIScrollView) {
+            hostingController.view.invalidateIntrinsicContentSize()
+            hostingController.view.setNeedsLayout()
+            hostingController.view.layoutIfNeeded()
+            scrollView.setNeedsLayout()
+            scrollView.layoutIfNeeded()
         }
     }
 }
