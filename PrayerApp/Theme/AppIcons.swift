@@ -2,7 +2,7 @@ import Foundation
 
 enum AppIcons {
     // Tab Bar
-    static let map          = "figure.walk"
+    static let challenges   = "trophy.fill"
     static let tree         = "tree"
     static let add          = "plus"
     static let prayers      = "prayingHands"   // asset image — use Image(_:)

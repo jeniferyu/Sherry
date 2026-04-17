@@ -39,7 +39,7 @@ struct MainTabView: View {
 
     private var customTabBar: some View {
         HStack(spacing: 0) {
-            tabButton(icon: AppIcons.map, label: "Journey", tag: 0)
+            tabButton(icon: AppIcons.challenges, label: "Challenges", tag: 0)
             tabButton(icon: AppIcons.tree, label: "Tree", tag: 1)
 
             // Center FAB
@@ -68,6 +68,7 @@ struct MainTabView: View {
 
             tabButton(label: "Prayers", tag: 3) {
                 Image("prayingHands")
+                    .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 28, height: 28)
