@@ -5,6 +5,25 @@ struct PrayerTreeView: View {
     @State private var showingStarDetail = false
     @State private var showingInventory = false
     @State private var showingOrchard = false
+    /// Oak growth showcase on the Tree tab: sprout → … → stage_5 (persisted).
+    @AppStorage("oakTreeShowcaseStage") private var oakShowcaseStageStored: Int = 1
+
+    private static let oakStageImageNames = ["sprout", "stage_2", "stage_3", "stage_4", "stage_5"]
+
+    /// Bottom gap below tree + buttons, as a fraction of screen height **per stage**.
+    /// Larger → tree sits higher; smaller → tree sits lower. Tune each index (stages 1…5) independently.
+    private static let oakShowcaseBottomReserveHeightFractionByStage: [CGFloat] = [
+        0.32, 0.31, 0.29, 0.27, 0.26
+    ]
+
+    /// Matches `padding(.bottom, …)` on Decoration / Orchard corner badges.
+    private static let treeCornerIconBottomPadding: CGFloat = 80
+    /// Extra lift so Grow / Reset sit slightly **above** the corner row (fixed position).
+    private static let oakGrowResetLiftAboveCorners: CGFloat = 56
+
+    private var oakShowcaseStage: Int {
+        min(5, max(1, oakShowcaseStageStored))
+    }
 
     var body: some View {
         ZStack {
@@ -15,13 +34,12 @@ struct PrayerTreeView: View {
                         let h = geo.size.height
 
                         ZStack {
-                            // Sky + ground (tree is sprout asset)
-                            sceneCanvas()
-                                .frame(width: w, height: h)
+                            treeBackgroundImage(w: w, h: h)
 
-                            cloudImageLayer(w: w, h: h)
+                            oakTreeShowcaseLayer(w: w, h: h)
 
-                            sproutTreeLayer(w: w, h: h, growth: viewModel.treeGrowthFraction)
+                            treeMaturityBar(h: h)
+                                .position(x: 28, y: h * 0.50)
 
                             // Stars in the sky region
                             ForEach(viewModel.stars) { star in
@@ -63,7 +81,7 @@ struct PrayerTreeView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.leading, AppSpacing.lg)
-                    .padding(.bottom, 80)
+                    .padding(.bottom, Self.treeCornerIconBottomPadding)
                 }
                 .overlay(alignment: .bottomTrailing) {
                     Button {
@@ -78,12 +96,19 @@ struct PrayerTreeView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.trailing, AppSpacing.lg)
-                    .padding(.bottom, 80)
+                    .padding(.bottom, Self.treeCornerIconBottomPadding)
+                }
+                .overlay(alignment: .bottom) {
+                    oakGrowResetButtons(stage: oakShowcaseStage)
+                        .padding(.bottom, Self.treeCornerIconBottomPadding + Self.oakGrowResetLiftAboveCorners)
                 }
                 .toolbarBackground(.hidden, for: .navigationBar)
                 .navigationBarTitleDisplayMode(.inline)
             }
-            .onAppear { viewModel.fetchTreeData() }
+            .onAppear {
+                viewModel.fetchTreeData()
+                oakShowcaseStageStored = min(5, max(1, oakShowcaseStageStored))
+            }
             .sheet(isPresented: $showingStarDetail) {
                 if let star = viewModel.selectedStar {
                     StarDetailSheet(star: star, onDismiss: {
@@ -142,99 +167,192 @@ struct PrayerTreeView: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
-    // MARK: - Full Scene Canvas
+    // MARK: - Maturity Bar
 
-    private func sceneCanvas() -> some View {
-        Canvas { ctx, size in
-            let w = size.width
-            let h = size.height
-
-            drawSky(ctx: ctx, w: w, h: h)
-            drawForeground(ctx: ctx, w: w, h: h)
+    /// Stage → fill fraction mapping.
+    private func maturityFraction(for stage: Int) -> Double {
+        switch stage {
+        case 1: return 0.10
+        case 2: return 0.25
+        case 3: return 0.50
+        case 4: return 0.75
+        default: return 1.00
         }
     }
 
-    // MARK: - Sky
+    private func treeMaturityBar(h: CGFloat) -> some View {
+        let barH: CGFloat = h * 0.38
+        let barW: CGFloat = 10
+        let fraction = maturityFraction(for: oakShowcaseStage)
 
-    private func drawSky(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
-        let skyRect = CGRect(x: 0, y: 0, width: w, height: h)
-        ctx.fill(Path(skyRect), with: .linearGradient(
-            Gradient(colors: [
-                Color(red: 0.45, green: 0.72, blue: 0.95),
-                Color(red: 0.60, green: 0.82, blue: 0.96),
-                Color(red: 0.75, green: 0.90, blue: 0.97),
-            ]),
-            startPoint: CGPoint(x: w / 2, y: 0),
-            endPoint: CGPoint(x: w / 2, y: h * 0.55)
-        ))
-    }
+        return VStack(spacing: 6) {
+            Image(systemName: "leaf.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color(red: 0.22, green: 0.65, blue: 0.28))
 
-    // MARK: - Clouds (asset)
+            ZStack(alignment: .bottom) {
+                // Track
+                RoundedRectangle(cornerRadius: barW / 2)
+                    .fill(Color.white.opacity(0.30))
+                    .frame(width: barW, height: barH)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: barW / 2)
+                            .strokeBorder(Color.white.opacity(0.45), lineWidth: 1)
+                    )
 
-    private func cloudImageLayer(w: CGFloat, h: CGFloat) -> some View {
-        ZStack {
-            cloudAsset(width: w * 0.28, x: w * 0.20, y: h * 0.10, opacity: 0.92)
-            cloudAsset(width: w * 0.30, x: w * 0.50, y: h * 0.18, opacity: 0.88)
-            cloudAsset(width: w * 0.22, x: w * 0.88, y: h * 0.22, opacity: 0.90)
-            cloudAsset(width: w * 0.26, x: w * 0.12, y: h * 0.25, opacity: 0.85)
+                // Fill
+                RoundedRectangle(cornerRadius: barW / 2)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.28, green: 0.78, blue: 0.38),
+                                Color(red: 0.60, green: 0.92, blue: 0.45)
+                            ],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
+                    )
+                    .frame(width: barW, height: barH * fraction)
+                    .animation(.easeInOut(duration: 0.4), value: fraction)
+            }
+
+            Text("\(Int(fraction * 100))%")
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
         }
-        .frame(width: w, height: h)
-        .allowsHitTesting(false)
+        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        .accessibilityLabel("Tree maturity \(Int(fraction * 100)) percent")
     }
 
-    private func cloudAsset(width: CGFloat, x: CGFloat, y: CGFloat, opacity: Double) -> some View {
-        Image("cloud")
+    // MARK: - Background
+
+    private func treeBackgroundImage(w: CGFloat, h: CGFloat) -> some View {
+        Image("background")
             .resizable()
-            .scaledToFit()
-            .frame(width: width)
-            .opacity(opacity)
-            .position(x: x, y: y)
+            .scaledToFill()
+            .frame(width: w, height: h)
+            .clipped()
+            .allowsHitTesting(false)
     }
 
-    // MARK: - Foreground Ground
+    // MARK: - Oak tree showcase (5 stages)
 
-    private func drawForeground(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
-        let grassColor = Color(red: 0.42, green: 0.65, blue: 0.35)
-        let grassDark = Color(red: 0.35, green: 0.55, blue: 0.28)
 
-        var path = Path()
-        let baseY = h * 0.68
-        path.move(to: CGPoint(x: 0, y: baseY + h * 0.03))
-        path.addQuadCurve(to: CGPoint(x: w * 0.30, y: baseY),
-                          control: CGPoint(x: w * 0.15, y: baseY - h * 0.02))
-        path.addQuadCurve(to: CGPoint(x: w * 0.55, y: baseY + h * 0.01),
-                          control: CGPoint(x: w * 0.42, y: baseY - h * 0.01))
-        path.addQuadCurve(to: CGPoint(x: w, y: baseY),
-                          control: CGPoint(x: w * 0.80, y: baseY - h * 0.02))
-        path.addLine(to: CGPoint(x: w, y: h))
-        path.addLine(to: CGPoint(x: 0, y: h))
-        path.closeSubpath()
-        ctx.fill(path, with: .linearGradient(
-            Gradient(colors: [grassColor, grassDark]),
-            startPoint: CGPoint(x: w / 2, y: baseY),
-            endPoint: CGPoint(x: w / 2, y: h)
-        ))
-    }
-
-    // MARK: - Sprout tree (asset)
-
-    /// Bottom of sprout aligns with the hill line (`h * 0.70`); width scales with prayer progress.
-    private func sproutTreeLayer(w: CGFloat, h: CGFloat, growth: Double) -> some View {
-        let g = max(0.02, min(1.0, growth))
-        let maxW = w * lerp(0.16, 0.38, g)
+    /// Flexible top spacer + fixed bottom gap positions the tree. Grow / Reset are overlaid separately.
+    private func oakTreeShowcaseLayer(w: CGFloat, h: CGFloat) -> some View {
+        let stage = oakShowcaseStage
+        let idx = stage - 1
+        let imageName = Self.oakStageImageNames[idx]
+        let maxW = w * oakTreeMaxWidthFraction(for: stage)
 
         return VStack(spacing: 0) {
             Spacer(minLength: 0)
-            Image("sprout")
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: maxW)
-                .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+            VStack(spacing: 10) {
+                oakTreeStageImage(
+                    imageName: imageName,
+                    stage: stage,
+                    maxWidth: maxW,
+                    screenWidth: w
+                )
+            }
             Spacer()
-                .frame(height: h * 0.30)
+                .frame(height: h * oakShowcaseBottomReserveHeightFraction(for: stage))
         }
         .frame(width: w, height: h)
-        .allowsHitTesting(false)
+    }
+
+    private func oakShowcaseBottomReserveHeightFraction(for stage: Int) -> CGFloat {
+        let idx = stage - 1
+        guard idx >= 0,
+              idx < Self.oakShowcaseBottomReserveHeightFractionByStage.count
+        else { return Self.oakShowcaseBottomReserveHeightFractionByStage.first ?? 0.22 }
+        return Self.oakShowcaseBottomReserveHeightFractionByStage[idx]
+    }
+
+    private func oakGrowResetButtons(stage: Int) -> some View {
+        HStack(spacing: 12) {
+            Spacer(minLength: 0)
+            Button {
+                growOakStage()
+            } label: {
+                Text("Grow")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(red: 0.18, green: 0.28, blue: 0.18))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 0.72, green: 0.88, blue: 0.62))
+                    )
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(stage >= 5)
+            .opacity(stage >= 5 ? 0.45 : 1)
+
+            Button {
+                resetOakStage()
+            } label: {
+                Text("Reset")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(red: 0.35, green: 0.24, blue: 0.20))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color(red: 0.92, green: 0.82, blue: 0.70))
+                    )
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(Color.white.opacity(0.45), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Like the original sprout: `scaledToFit` + `maxWidth` only. Final stage floor ~62% screen width.
+    private func oakTreeStageImage(imageName: String, stage: Int, maxWidth: CGFloat, screenWidth: CGFloat) -> some View {
+        let isFinalStage = stage == 5
+        let cappedWidth = isFinalStage ? max(maxWidth, screenWidth * 0.62) : maxWidth
+
+        return Image(imageName)
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: cappedWidth)
+            .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+            .animation(.easeInOut(duration: 0.28), value: imageName)
+            .accessibilityLabel("Oak tree, stage \(stage) of 5")
+    }
+
+    private func oakTreeMaxWidthFraction(for stage: Int) -> CGFloat {
+        if stage <= 1 { return 0.16 }
+        let t = Double(stage - 2) / 3.0
+        let base = lerp(0.38, 0.58, t)
+        switch stage {
+        case 4: return max(base, 0.64)
+        case 5: return max(base, 0.78)
+        default: return base
+        }
+    }
+
+    private func growOakStage() {
+        guard oakShowcaseStage < 5 else { return }
+        withAnimation(.easeInOut(duration: 0.28)) {
+            oakShowcaseStageStored = oakShowcaseStage + 1
+        }
+    }
+
+    private func resetOakStage() {
+        withAnimation(.easeInOut(duration: 0.28)) {
+            oakShowcaseStageStored = 1
+        }
     }
 
     private func lerp(_ a: Double, _ b: Double, _ t: Double) -> CGFloat {
