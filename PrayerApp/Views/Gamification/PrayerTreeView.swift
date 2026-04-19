@@ -4,6 +4,7 @@ struct PrayerTreeView: View {
     @StateObject private var viewModel = PrayerTreeViewModel()
     @State private var showingStarDetail = false
     @State private var showingInventory = false
+    @State private var showingOrchard = false
 
     var body: some View {
         ZStack {
@@ -51,12 +52,32 @@ struct PrayerTreeView: View {
                 }
                 .overlay(alignment: .bottomLeading) {
                     Button {
+                        showingOrchard = false
                         showingInventory = true
                     } label: {
-                        decorationGiftBadge
+                        cornerIconBadge(
+                            imageName: "treasure_chest",
+                            caption: "Decoration",
+                            accessibilityLabel: "Decoration library"
+                        )
                     }
                     .buttonStyle(.plain)
                     .padding(.leading, AppSpacing.lg)
+                    .padding(.bottom, 80)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        showingInventory = false
+                        showingOrchard = true
+                    } label: {
+                        cornerIconBadge(
+                            imageName: "orchard_forest",
+                            caption: "Orchard",
+                            accessibilityLabel: "Orchard"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, AppSpacing.lg)
                     .padding(.bottom, 80)
                 }
                 .toolbarBackground(.hidden, for: .navigationBar)
@@ -73,18 +94,23 @@ struct PrayerTreeView: View {
                 }
             }
 
-            // ── Inventory overlay (above navigation chrome) ───────────────
+            // ── Backpack & Orchard overlays (above navigation chrome) ───
             if showingInventory {
                 InventoryView(isPresented: $showingInventory)
                     .transition(.scale(scale: 0.92).combined(with: .opacity))
                     .zIndex(10)
             }
+            if showingOrchard {
+                OrchardView(isPresented: $showingOrchard)
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                    .zIndex(10)
+            }
         }
-        .animation(.spring(response: 0.30, dampingFraction: 0.82), value: showingInventory)
+        .animation(.spring(response: 0.30, dampingFraction: 0.82), value: showingInventory || showingOrchard)
     }
 
-    /// White ring + treasure chest asset; mint “Decoration” pill overlaps the bottom of the ring.
-    private var decorationGiftBadge: some View {
+    /// White ring + asset image; mint pill overlaps the bottom of the ring (matches treasure / orchard corners).
+    private func cornerIconBadge(imageName: String, caption: String, accessibilityLabel: String) -> some View {
         VStack(spacing: -10) {
             ZStack {
                 Circle()
@@ -93,13 +119,13 @@ struct PrayerTreeView: View {
                     .shadow(color: Color.white.opacity(0.55), radius: 4, y: 0)
                     .shadow(color: Color.white.opacity(0.3), radius: 10, y: 0)
 
-                Image("treasure_chest")
+                Image(imageName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 55, height: 55)
             }
 
-            Text("Decoration")
+            Text(caption)
                 .font(.system(size: 8, weight: .bold, design: .rounded))
                 .foregroundColor(Color(red: 0.14, green: 0.30, blue: 0.20))
                 .padding(.horizontal, 9)
@@ -113,7 +139,7 @@ struct PrayerTreeView: View {
                         .strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
                 )
         }
-        .accessibilityLabel("Decoration library")
+        .accessibilityLabel(accessibilityLabel)
     }
 
     // MARK: - Full Scene Canvas

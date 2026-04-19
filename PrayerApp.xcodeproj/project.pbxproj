@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		GA5E8B0112233445566778A1 /* GameStatsBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = GA5E8B0112233445566778A0 /* GameStatsBannerView.swift */; };
 		B2C3D4E5F6A7B8C9D0E1F2A3 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A4 /* InventoryView.swift */; };
+		E133EE66FF55AA22BB33CC44 /* OrchardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E133EE66FF55AA22BB33CC55 /* OrchardView.swift */; };
 		007A6651E23A0245598FE3CE /* SinglePrayerFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91344B8653BC19284E15F9AD /* SinglePrayerFlowView.swift */; };
 		05BA416DBEC7F9C76BCE9C0E /* PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFE24A41D119ED2DC947DC4A /* PreviewData.swift */; };
 		0A646B58BC944288E0DF95A8 /* ACTSStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4899DBA71C71D8A2E7447195 /* ACTSStepView.swift */; };
@@ -125,6 +126,7 @@
 		8AB950F8628373DC9F2099E0 /* DecorationLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecorationLibraryView.swift; sourceTree = "<group>"; };
 		8AF4DBE8BF6CD2831739CF7C /* DecorationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecorationViewModel.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A7B8C9D0E1F2A4 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
+		E133EE66FF55AA22BB33CC55 /* OrchardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrchardView.swift; sourceTree = "<group>"; };
 		8BA7137CCED47636E29D528C /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		8BD21F83E316B0BA55317A3D /* ACTSReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACTSReviewView.swift; sourceTree = "<group>"; };
 		91344B8653BC19284E15F9AD /* SinglePrayerFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SinglePrayerFlowView.swift; sourceTree = "<group>"; };
@@ -324,6 +326,7 @@
 				374A20CBAFEBFF207D4C5C31 /* DayDetailSheet.swift */,
 				8AB950F8628373DC9F2099E0 /* DecorationLibraryView.swift */,
 				B2C3D4E5F6A7B8C9D0E1F2A4 /* InventoryView.swift */,
+				E133EE66FF55AA22BB33CC55 /* OrchardView.swift */,
 				CC01AA11BB22DD33EE44FF55 /* JourneyNodeView.swift */,
 				DD11BB22CC33EE44FF55AA66 /* JourneyPathShape.swift */,
 				2DAC4957F42A1534C0E5F47A /* LeafDetailSheet.swift */,
@@ -464,6 +467,7 @@
 				861FEE38BD5F1EB3390B6AB9 /* Decoration+Extensions.swift in Sources */,
 				F777FB27E9FAB9346958AA05 /* DecorationLibraryView.swift in Sources */,
 				B2C3D4E5F6A7B8C9D0E1F2A3 /* InventoryView.swift in Sources */,
+				E133EE66FF55AA22BB33CC44 /* OrchardView.swift in Sources */,
 				CA87867742B81FD4A6D287C4 /* DecorationService.swift in Sources */,
 				F13A8147B4659AAA2E7567D1 /* DecorationViewModel.swift in Sources */,
 				15C3EC272FA820008F2DF8B4 /* EmptyStateView.swift in Sources */,
