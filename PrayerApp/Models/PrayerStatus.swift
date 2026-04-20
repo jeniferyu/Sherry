@@ -8,7 +8,7 @@ enum PrayerStatus: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .ongoing:  return "In Progress"
+        case .ongoing:  return "Unprayed"
         case .prayed:   return "Prayed"
         case .answered: return "Answered"
         case .archived: return "Archived"

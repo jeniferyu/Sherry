@@ -127,13 +127,13 @@ final class RoadMapViewModel: ObservableObject {
 
     // MARK: - Scroll Focus
 
-    /// Index of the day to center on initial map scroll.
-    /// Returns the current day index if one exists, otherwise the last completed index,
-    /// otherwise 0 (Day 1 — the start of a brand-new challenge).
+    /// Index for map scroll and the “current step” arrow: first day not yet completed.
+    /// When every day is done, points at the last day.
     var focusDayIndex: Int {
-        if let i = challenge.days.firstIndex(where: { $0.isCurrent }) { return i }
-        if let i = challenge.days.lastIndex(where: { $0.isCompleted }) { return i }
-        return 0
+        let days = challenge.days
+        guard !days.isEmpty else { return 0 }
+        if let i = days.firstIndex(where: { !$0.isCompleted }) { return i }
+        return days.count - 1
     }
 
     // MARK: - Challenge Tier Logic

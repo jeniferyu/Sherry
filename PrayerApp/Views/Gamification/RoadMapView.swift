@@ -17,6 +17,24 @@ struct RoadMapView: View {
     /// outer section transition takes over.
     private let mapBoundaryDragTrigger: CGFloat = 44
 
+    /// Soft mint panel behind “Choose Your Next Challenge” and “Your Journey” (lighter than the main green).
+    private var challengesLightSectionBackground: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.91, green: 0.97, blue: 0.93),
+                Color(red: 0.85, green: 0.95, blue: 0.89),
+                Color(red: 0.80, green: 0.93, blue: 0.86),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    private let challengesAccentGreen = Color(red: 0.28, green: 0.48, blue: 0.32)
+
+    /// Distance from node center upward to the arrow image center (arrow points down at the node).
+    private let currentStepArrowOffsetFromNodeCenter: CGFloat = 76
+
     var body: some View {
         NavigationStack {
             GeometryReader { geo in
@@ -117,7 +135,7 @@ struct RoadMapView: View {
                     }
                 } label: {
                     Circle()
-                        .fill(i == currentPage ? Color.white : Color.white.opacity(0.3))
+                        .fill(i == currentPage ? challengesAccentGreen : Color.black.opacity(0.12))
                         .frame(width: i == currentPage ? 8 : 6, height: i == currentPage ? 8 : 6)
                         .animation(.easeInOut(duration: 0.2), value: currentPage)
                 }
@@ -131,6 +149,7 @@ struct RoadMapView: View {
     private func challengePickerPage(height: CGFloat) -> some View {
         challengePickerSection
             .frame(maxWidth: .infinity, minHeight: height, alignment: .top)
+            .background(challengesLightSectionBackground)
             .clipped()
     }
 
@@ -144,11 +163,13 @@ struct RoadMapView: View {
                     .clipped()
             }
         }
+        .background(Color.white)
     }
 
     private func progressSummaryPage(height: CGFloat) -> some View {
         progressSummarySection
             .frame(maxWidth: .infinity, minHeight: height, alignment: .top)
+            .background(challengesLightSectionBackground)
             .clipped()
     }
 
@@ -161,21 +182,21 @@ struct RoadMapView: View {
             Text("UP NEXT")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .tracking(1.5)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(challengesAccentGreen.opacity(0.85))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
-                .background(Capsule().fill(Color.white.opacity(0.12)))
+                .background(Capsule().fill(Color.white.opacity(0.65)))
 
             Text("Choose Your Next Challenge")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(Color.appTextPrimary)
                 .minimumScaleFactor(0.85)
                 .lineLimit(2)
 
             if viewModel.currentChallengeInProgress {
                 Text("Complete your current challenge to unlock choices")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(Color.appTextSecondary)
                     .minimumScaleFactor(0.85)
                     .multilineTextAlignment(.center)
             }
@@ -202,8 +223,8 @@ struct RoadMapView: View {
                 ZStack {
                     Circle()
                         .fill(tier.isUnlocked
-                              ? Color.appPrimary.opacity(0.5)
-                              : Color(red: 0.60, green: 0.60, blue: 0.60))
+                              ? Color(red: 0.40, green: 0.62, blue: 0.44)
+                              : Color(red: 0.82, green: 0.84, blue: 0.82))
                         .frame(width: 44, height: 44)
 
                     if tier.isCompleted {
@@ -213,7 +234,7 @@ struct RoadMapView: View {
                     } else if !tier.isUnlocked {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(Color.appTextTertiary)
                     } else {
                         Text("\(tier.totalDays)")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -224,28 +245,31 @@ struct RoadMapView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tier.title)
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(tier.isUnlocked ? .white : .white.opacity(0.45))
+                        .foregroundColor(tier.isUnlocked ? Color.appTextPrimary : Color.appTextTertiary)
 
                     Text(tierSubtitle(tier))
                         .font(.system(size: 12, weight: .regular, design: .rounded))
-                        .foregroundColor(tier.isUnlocked ? .white.opacity(0.7) : .white.opacity(0.3))
+                        .foregroundColor(tier.isUnlocked ? Color.appTextSecondary : Color.appTextTertiary)
                 }
 
                 Spacer()
 
                 if tier.isCompleted {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(Color.appAnswered)
+                    Image("shined_star")
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
                 }
             }
             .padding(AppSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Color.white.opacity(0.92))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1.5)
+                    .strokeBorder(Color.black.opacity(0.06), lineWidth: 1)
             )
         }
         .disabled(!tier.isUnlocked)
@@ -266,7 +290,10 @@ struct RoadMapView: View {
 
     private func mapCanvas(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> some View {
         ZStack {
+            Color.white
             groundDecor(w: w, h: h)
+
+            roadSideTreeDecorations(w: w, h: h)
 
             dynamicWindingPath(w: w, h: h, pageHeight: pageHeight)
                 .stroke(
@@ -294,8 +321,97 @@ struct RoadMapView: View {
                     starsArcAroundNode(count: day.starRating, center: pos)
                 }
             }
+
+            if positions.indices.contains(viewModel.focusDayIndex) {
+                let idx = viewModel.focusDayIndex
+                let p = positions[idx]
+                currentStepArrowImage()
+                    .position(
+                        x: p.x,
+                        y: p.y - currentStepArrowOffsetFromNodeCenter
+                    )
+                    .animation(.spring(response: 0.38, dampingFraction: 0.78), value: viewModel.focusDayIndex)
+                    .zIndex(50)
+            }
         }
         .frame(width: w, height: h)
+    }
+
+    private func currentStepArrowImage() -> some View {
+        Image("arrow")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 52, height: 60)
+            .shadow(color: .black.opacity(0.12), radius: 3, y: 2)
+            .accessibilityLabel("Current challenge day")
+    }
+
+    // MARK: - Road-side tree decorations
+
+    private struct RoadTreePlacement: Identifiable {
+        let id: Int
+        let x: CGFloat
+        let y: CGFloat
+        let imageName: String
+        let flip: Bool
+        let width: CGFloat
+        let height: CGFloat
+    }
+
+    /// Sparse trees alternating left / right down the canvas; spacing scales with map height.
+    private func roadSideTreePlacements(w: CGFloat, h: CGFloat) -> [RoadTreePlacement] {
+        let treeW = min(w * 0.165, 94)
+        let treeH = treeW * 1.18
+        let xLeft = w * 0.052
+        let xRight = w * 0.948
+
+        let strideTarget = max(195, min(370, h * 0.245))
+        var y = h * 0.11
+        var index = 0
+        var placements: [RoadTreePlacement] = []
+
+        while y < h - h * 0.065 {
+            let left = index % 2 == 0
+            let imageName = index % 2 == 0 ? "road_tree_1" : "road_tree_2"
+            let xBase = left ? xLeft : xRight
+            let jitter = CGFloat((index % 5) - 2) * 4
+            let x = min(max(xBase + (left ? jitter : -jitter), treeW * 0.45), w - treeW * 0.45)
+            let flip = !left
+
+            placements.append(
+                RoadTreePlacement(
+                    id: index,
+                    x: x,
+                    y: y,
+                    imageName: imageName,
+                    flip: flip,
+                    width: treeW,
+                    height: treeH
+                )
+            )
+
+            y += strideTarget * (0.90 + 0.035 * CGFloat(index % 4))
+            index += 1
+            if index > 22 { break }
+        }
+
+        return placements
+    }
+
+    private func roadSideTreeDecorations(w: CGFloat, h: CGFloat) -> some View {
+        let placements = roadSideTreePlacements(w: w, h: h)
+        return ZStack {
+            ForEach(placements) { p in
+                Image(p.imageName)
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFit()
+                    .frame(width: p.width, height: p.height)
+                    .scaleEffect(x: p.flip ? -1 : 1, y: 1)
+                    .position(x: p.x, y: p.y)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Scrollable Map
@@ -534,13 +650,11 @@ struct RoadMapView: View {
     }
 
     private func nodeStarGlyph(filled: Bool) -> some View {
-        let goldStar = Color.appAnswered
-        let greyStar = Color(red: 0.78, green: 0.76, blue: 0.78)
-        return Image(systemName: "star.fill")
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(filled ? goldStar : greyStar)
-            .shadow(color: filled ? goldStar.opacity(0.75) : .clear, radius: 5, y: 1)
-            .shadow(color: filled ? Color.white.opacity(0.55) : .clear, radius: 2, y: -1)
+        Image(filled ? "shined_star" : "unshined_star")
+            .resizable()
+            .renderingMode(.original)
+            .scaledToFit()
+            .frame(width: 22, height: 22)
     }
 
     private func starArcOffset(index: Int) -> CGSize {
@@ -562,7 +676,7 @@ struct RoadMapView: View {
     /// Padding pushes spacing toward the section side, keeping the line flush with the map.
     private func roadSectionDivider(topPadding: CGFloat, bottomPadding: CGFloat) -> some View {
         Rectangle()
-            .fill(Color.white.opacity(0.15))
+            .fill(Color.black.opacity(0.08))
             .frame(height: 1.5)
             .padding(.top, topPadding)
             .padding(.bottom, bottomPadding)
@@ -576,15 +690,16 @@ struct RoadMapView: View {
             Text("YOUR JOURNEY")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .tracking(1.5)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(challengesAccentGreen.opacity(0.85))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
-                .background(Capsule().fill(Color.white.opacity(0.12)))
+                .background(Capsule().fill(Color.white.opacity(0.65)))
 
             VStack(spacing: AppSpacing.md) {
                 summaryStatRow(icon: "star.fill", color: .appAnswered,
                                label: "Stars Collected",
-                               value: "\(viewModel.totalStarsEarned)")
+                               value: "\(viewModel.totalStarsEarned)",
+                               rowIconAsset: "shined_star")
 
                 summaryStatRow(icon: "checkmark.seal.fill", color: Color(red: 0.40, green: 0.72, blue: 0.95),
                                label: "Challenges Completed",
@@ -601,18 +716,18 @@ struct RoadMapView: View {
             .padding(AppSpacing.lg)
             .background(
                 RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
+                    .fill(Color.white.opacity(0.92))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(Color.black.opacity(0.06), lineWidth: 1)
             )
             .padding(.horizontal, AppSpacing.lg)
             .layoutPriority(1)
 
             Text("Keep praying — your journey continues!")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(Color.appTextSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.top, AppSpacing.sm)
 
@@ -620,17 +735,27 @@ struct RoadMapView: View {
         }
     }
 
-    private func summaryStatRow(icon: String, color: Color, label: String, value: String) -> some View {
+    private func summaryStatRow(icon: String, color: Color, label: String, value: String, rowIconAsset: String? = nil) -> some View {
         HStack(spacing: AppSpacing.md) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(color)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(color.opacity(0.15)))
+            Group {
+                if let assetName = rowIconAsset {
+                    Image(assetName)
+                        .resizable()
+                        .renderingMode(.original)
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(color)
+                }
+            }
+            .frame(width: 36, height: 36)
+            .background(Circle().fill(color.opacity(0.15)))
 
             Text(label)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(Color.appTextPrimary)
                 .minimumScaleFactor(0.85)
                 .lineLimit(1)
 
@@ -638,7 +763,7 @@ struct RoadMapView: View {
 
             Text(value)
                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(Color.appTextPrimary)
                 .minimumScaleFactor(0.85)
                 .lineLimit(1)
         }
@@ -688,7 +813,7 @@ private struct BoundaryAwareMapScrollView<Content: View>: UIViewRepresentable {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.alwaysBounceVertical = true
         scrollView.bounces = true
-        scrollView.backgroundColor = .clear
+        scrollView.backgroundColor = .white
         scrollView.contentInsetAdjustmentBehavior = .never
 
         let hostView = context.coordinator.hostingController.view!
