@@ -6,6 +6,8 @@ public class PrayerSession: NSManagedObject {
     @NSManaged public var date: Date?
     @NSManaged public var duration: Float
     @NSManaged public var id: UUID?
+    @NSManaged public var xpEarned: Int32
+    @NSManaged public var dropsEarned: Int32
     @NSManaged public var dailyRecord: DailyRecord?
     @NSManaged public var items: NSSet?
 

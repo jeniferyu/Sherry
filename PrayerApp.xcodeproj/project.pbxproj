@@ -33,6 +33,7 @@
 		579A68EFF1D8F1651034C68B /* AddPrayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94E1C37D7429CEB43873D53 /* AddPrayerView.swift */; };
 		584BEE016A0292B5B5645C5C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8EA8DCCFF300DCCB7C1E49A /* Assets.xcassets */; };
 		5D8A11D0DE4DE4F7F12701DB /* GamificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C96397001ACDA70FFAA40A /* GamificationService.swift */; };
+		AB11CD22EF33AB44CD55EF66 /* RewardCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD22EF33AB44CD55EF66AB11 /* RewardCalculator.swift */; };
 		6EE0120853EA100CA5C8129E /* PrayerSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17A9E08BE4E62E8DBEAC02B2 /* PrayerSession+Extensions.swift */; };
 		724BBCCC71BAB2F6D9901E4F /* PrayerTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25060F348D23F1D6986C5B21 /* PrayerTreeView.swift */; };
 		747C86040C3329DA7E92B333 /* PrayerSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1C41DBFAEE079F27950B6B /* PrayerSessionView.swift */; };
@@ -88,6 +89,7 @@
 /* Begin PBXFileReference section */
 		01E2ED8E460492E8080EE25E /* PrayerTreeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTreeViewModel.swift; sourceTree = "<group>"; };
 		02C96397001ACDA70FFAA40A /* GamificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationService.swift; sourceTree = "<group>"; };
+		CD22EF33AB44CD55EF66AB11 /* RewardCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardCalculator.swift; sourceTree = "<group>"; };
 		0C68DA0F3EFF57BE60F9FAB8 /* SessionCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCompleteView.swift; sourceTree = "<group>"; };
 		0E8C5EFD627E910E2206B9E8 /* PrayerSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerSessionViewModel.swift; sourceTree = "<group>"; };
 		1044AE159D731DBF5E76C409 /* PrayerSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerSearchView.swift; sourceTree = "<group>"; };
@@ -231,6 +233,7 @@
 				02C96397001ACDA70FFAA40A /* GamificationService.swift */,
 				3D2B3FAAE6DB47D7748195DE /* PersistenceController.swift */,
 				52C30F30CF6645EC906006D4 /* PrayerService.swift */,
+				CD22EF33AB44CD55EF66AB11 /* RewardCalculator.swift */,
 				B28B784E5406275F568B4EE9 /* SessionService.swift */,
 			);
 			path = Services;
@@ -472,6 +475,7 @@
 				F13A8147B4659AAA2E7567D1 /* DecorationViewModel.swift in Sources */,
 				15C3EC272FA820008F2DF8B4 /* EmptyStateView.swift in Sources */,
 				5D8A11D0DE4DE4F7F12701DB /* GamificationService.swift in Sources */,
+				AB11CD22EF33AB44CD55EF66 /* RewardCalculator.swift in Sources */,
 				17451C16CA7053B9634639EA /* IntercessoryDetailView.swift in Sources */,
 				FA166699F42BB3677332C58E /* IntercessoryGroup.swift in Sources */,
 				958E2A63A4D77FE605FBECFE /* IntercessoryListView.swift in Sources */,

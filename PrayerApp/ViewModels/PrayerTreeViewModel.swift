@@ -52,15 +52,12 @@ final class PrayerTreeViewModel: ObservableObject {
         yearSessionCount = sessions.count
         buildStars(from: sessions)
 
-        level = gamificationService.calculateLevel()
-        let currentXP = gamificationService.calculateXP()
-        let nextLevelXP = gamificationService.xpForLevel(level + 1)
-        let currentLevelBase = gamificationService.xpForLevel(level)
-        let needed = max(nextLevelXP - currentLevelBase, 1)
-        xpProgress = min(Double(currentXP - currentLevelBase) / Double(needed), 1.0)
+        let progress = gamificationService.levelProgress()
+        level = progress.level
+        xpProgress = progress.fraction
         prayedItemCount = gamificationService.getPrayedItemCount()
         intercessionPrayedCount = gamificationService.getIntercessionPrayedCount()
-        dropletCount = gamificationService.calculateDroplets()
+        dropletCount = gamificationService.getTotalDrops()
     }
 
     private func buildStars(from sessions: [PrayerSession]) {

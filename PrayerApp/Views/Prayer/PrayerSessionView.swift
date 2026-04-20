@@ -11,7 +11,7 @@ struct PrayerSessionView: View {
             if viewModel.isFinished, let session = viewModel.finishedSession {
                 SessionCompleteView(
                     session: session,
-                    newlyUnlocked: viewModel.newlyUnlockedDecorations,
+                    newlyUnlocked: viewModel.newlyAvailableDecorations,
                     onDismiss: onDismiss
                 )
                 .transition(.opacity.combined(with: .scale))

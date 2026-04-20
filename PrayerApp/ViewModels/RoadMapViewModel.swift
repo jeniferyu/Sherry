@@ -33,6 +33,23 @@ struct ChallengeTier: Identifiable {
     let isCompleted: Bool
 }
 
+/// How the user chose to resolve a missed day — see §3.5.3.
+enum MissedDayResolution {
+    case continueNormally
+    case spendDrops
+    case actsRecoveryPrayer
+}
+
+/// Outcome of resolving a missed day, returned so the view can show feedback.
+struct MissedDayResolutionOutcome {
+    let resolution: MissedDayResolution
+    let success: Bool
+    let xpAwarded: Int
+    let dropsAwarded: Int
+    let dropsSpent: Int
+    let continuityBroken: Bool
+}
+
 // MARK: - ViewModel
 
 final class RoadMapViewModel: ObservableObject {
@@ -57,7 +74,7 @@ final class RoadMapViewModel: ObservableObject {
     // Banner stats
     @Published var level: Int = 1
     @Published var currentXP: Int = 0
-    @Published var nextLevelXP: Int = 20
+    @Published var nextLevelXP: Int = 75
     @Published var xpProgress: Double = 0
     @Published var prayedItemCount: Int = 0
     @Published var intercessionPrayedCount: Int = 0
@@ -68,6 +85,10 @@ final class RoadMapViewModel: ObservableObject {
     @Published var totalStarsEarned: Int = 0
     @Published var totalPrayerDays: Int = 0
 
+    // Challenge / continuity state
+    @Published var pendingMissedDays: [Int] = []       // dayNumbers awaiting resolution
+    @Published var continuityBroken: Bool = false      // true ⇒ perfect bonus unavailable
+
     init(
         gamificationService: GamificationService = GamificationService(),
         sessionService: SessionService = SessionService()
@@ -77,6 +98,8 @@ final class RoadMapViewModel: ObservableObject {
         self.activeTierDays = Self.loadActiveTier()
     }
 
+    // MARK: - Fetch
+
     func fetchRecords() {
         streakCount = gamificationService.getStreakCount()
 
@@ -84,24 +107,25 @@ final class RoadMapViewModel: ObservableObject {
         activeTierDays = Self.loadActiveTier()
         challenge = buildChallenge(totalDays: activeTierDays)
 
-        // Auto-mark completion: if the active challenge is fully done, persist it
-        if challenge.isFullyCompleted && !completed.contains(activeTierDays) {
-            Self.markTierCompleted(activeTierDays)
-            completed = Self.loadCompletedTiers()
+        // When the active challenge is fully complete, attempt to award the
+        // completion + perfect bonuses (idempotent, guarded inside the service).
+        if challenge.isFullyCompleted {
+            let isPerfect = !gamificationService.isContinuityBroken(tier: activeTierDays)
+            gamificationService.awardChallengeCompletionIfNeeded(
+                tier: activeTierDays,
+                isPerfect: isPerfect
+            )
+            if !completed.contains(activeTierDays) {
+                Self.markTierCompleted(activeTierDays)
+                completed = Self.loadCompletedTiers()
+            }
         }
 
         currentChallengeInProgress = !challenge.isFullyCompleted
         challengeTiers = buildTiers(completedTiers: completed, challengeInProgress: currentChallengeInProgress)
 
-        level = gamificationService.calculateLevel()
-        currentXP = gamificationService.calculateXP()
-        nextLevelXP = gamificationService.xpForLevel(level + 1)
-        let currentLevelBase = gamificationService.xpForLevel(level)
-        let needed = max(nextLevelXP - currentLevelBase, 1)
-        xpProgress = min(Double(currentXP - currentLevelBase) / Double(needed), 1.0)
-        prayedItemCount = gamificationService.getPrayedItemCount()
-        intercessionPrayedCount = gamificationService.getIntercessionPrayedCount()
-        dropletCount = gamificationService.calculateDroplets()
+        refreshBannerStats()
+        refreshContinuityState()
 
         totalPrayerDays = gamificationService.getTotalPrayerDays()
         let completedSet = Self.loadCompletedTiers()
@@ -115,10 +139,31 @@ final class RoadMapViewModel: ObservableObject {
         totalStarsEarned = allStars
     }
 
+    /// Refreshes XP, level, drops, and related prayer counters from the gamification service.
+    /// Split out so it can be called after reward-granting actions without rebuilding everything.
+    private func refreshBannerStats() {
+        let progress = gamificationService.levelProgress()
+        level = progress.level
+        currentXP = progress.xpIntoLevel
+        nextLevelXP = progress.xpForNextLevel
+        xpProgress = progress.fraction
+
+        prayedItemCount = gamificationService.getPrayedItemCount()
+        intercessionPrayedCount = gamificationService.getIntercessionPrayedCount()
+        dropletCount = gamificationService.getTotalDrops()
+    }
+
+    // MARK: - Tier Selection
+
     func selectChallenge(_ tier: Int) {
-        // Temporary testing only: skip unlock guard when `unlockAllChallengeTiersForTesting` is true.
         if !Self.unlockAllChallengeTiersForTesting {
             guard challengeTiers.first(where: { $0.totalDays == tier })?.isUnlocked == true else { return }
+        }
+        // Switching to a different tier starts a fresh run — reset its bonus /
+        // continuity / daily-claim state so the user can earn them again.
+        if tier != activeTierDays {
+            gamificationService.resetChallengeState(tier: tier)
+            Self.clearLastResolvedMissedDay(tier: tier)
         }
         Self.saveActiveTier(tier)
         activeTierDays = tier
@@ -127,13 +172,81 @@ final class RoadMapViewModel: ObservableObject {
 
     // MARK: - Scroll Focus
 
-    /// Index for map scroll and the “current step” arrow: first day not yet completed.
+    /// Index for map scroll and the "current step" arrow: first day not yet completed.
     /// When every day is done, points at the last day.
     var focusDayIndex: Int {
         let days = challenge.days
         guard !days.isEmpty else { return 0 }
         if let i = days.firstIndex(where: { !$0.isCompleted }) { return i }
         return days.count - 1
+    }
+
+    // MARK: - Missed Day Handling (§3.5.3)
+
+    /// Rebuilds `pendingMissedDays` and `continuityBroken` from the latest challenge snapshot.
+    private func refreshContinuityState() {
+        continuityBroken = gamificationService.isContinuityBroken(tier: activeTierDays)
+        let lastResolved = Self.loadLastResolvedMissedDay(tier: activeTierDays)
+        pendingMissedDays = challenge.days
+            .filter { !$0.isCompleted && !$0.isLocked && !$0.isCurrent && $0.dayNumber > lastResolved }
+            .map(\.dayNumber)
+    }
+
+    /// Applies a user-chosen resolution to the oldest outstanding missed day.
+    /// Returns an outcome describing what happened, so the UI can show feedback.
+    @discardableResult
+    func resolveMissedDay(_ resolution: MissedDayResolution) -> MissedDayResolutionOutcome {
+        guard let nextMissed = pendingMissedDays.min() else {
+            return MissedDayResolutionOutcome(
+                resolution: resolution,
+                success: true,
+                xpAwarded: 0, dropsAwarded: 0, dropsSpent: 0,
+                continuityBroken: continuityBroken
+            )
+        }
+
+        var outcome = MissedDayResolutionOutcome(
+            resolution: resolution,
+            success: false,
+            xpAwarded: 0, dropsAwarded: 0, dropsSpent: 0,
+            continuityBroken: continuityBroken
+        )
+
+        switch resolution {
+        case .continueNormally:
+            gamificationService.markContinuityBroken(tier: activeTierDays)
+            outcome = MissedDayResolutionOutcome(
+                resolution: .continueNormally, success: true,
+                xpAwarded: 0, dropsAwarded: 0, dropsSpent: 0,
+                continuityBroken: true
+            )
+
+        case .spendDrops:
+            if gamificationService.spendDropsToPreserveContinuity(tier: activeTierDays) {
+                let cost = RewardCalculator.continuityRecoveryCost(totalDays: activeTierDays)
+                outcome = MissedDayResolutionOutcome(
+                    resolution: .spendDrops, success: true,
+                    xpAwarded: 0, dropsAwarded: 0, dropsSpent: cost,
+                    continuityBroken: false
+                )
+            } else {
+                // Not enough drops — keep the missed day pending, caller can fall back.
+                return outcome
+            }
+
+        case .actsRecoveryPrayer:
+            let reward = gamificationService.awardActsRecoveryBonus()
+            outcome = MissedDayResolutionOutcome(
+                resolution: .actsRecoveryPrayer, success: true,
+                xpAwarded: reward.xp, dropsAwarded: reward.drops, dropsSpent: 0,
+                continuityBroken: false
+            )
+        }
+
+        Self.saveLastResolvedMissedDay(tier: activeTierDays, dayNumber: nextMissed)
+        refreshBannerStats()
+        refreshContinuityState()
+        return outcome
     }
 
     // MARK: - Challenge Tier Logic
@@ -153,7 +266,6 @@ final class RoadMapViewModel: ObservableObject {
             let isCompleted = completedTiers.contains(days)
             let isUnlocked: Bool
 
-            // Temporary testing only: replace normal unlock rules with “all unlocked.” Revert by deleting this branch and restoring the `if challengeInProgress { … }` chain below.
             if Self.unlockAllChallengeTiersForTesting {
                 isUnlocked = true
             } else if challengeInProgress {
@@ -250,6 +362,7 @@ final class RoadMapViewModel: ObservableObject {
 
     private static let completedKey = "RoadMap_CompletedTiers"
     private static let activeTierKey = "RoadMap_ActiveTier"
+    private static func lastResolvedKey(tier: Int) -> String { "RoadMap_LastResolvedMissedDay_\(tier)" }
 
     static func loadCompletedTiers() -> Set<Int> {
         let arr = UserDefaults.standard.array(forKey: completedKey) as? [Int] ?? []
@@ -269,5 +382,63 @@ final class RoadMapViewModel: ObservableObject {
 
     static func saveActiveTier(_ tier: Int) {
         UserDefaults.standard.set(tier, forKey: activeTierKey)
+    }
+
+    static func loadLastResolvedMissedDay(tier: Int) -> Int {
+        UserDefaults.standard.integer(forKey: lastResolvedKey(tier: tier))
+    }
+
+    static func saveLastResolvedMissedDay(tier: Int, dayNumber: Int) {
+        let current = loadLastResolvedMissedDay(tier: tier)
+        if dayNumber > current {
+            UserDefaults.standard.set(dayNumber, forKey: lastResolvedKey(tier: tier))
+        }
+    }
+
+    static func clearLastResolvedMissedDay(tier: Int) {
+        UserDefaults.standard.removeObject(forKey: lastResolvedKey(tier: tier))
+    }
+
+    // MARK: - Static Helpers for Session Integration
+
+    /// Snapshot of the currently-active tier, used by `PrayerSessionViewModel`
+    /// when it applies per-session rewards without needing a road-map instance.
+    struct ActiveTierState {
+        let tier: Int?
+        let isInProgress: Bool
+    }
+
+    /// Reads the currently-selected tier and determines whether it is still in progress.
+    /// Completed tiers return `isInProgress == false`, which disables the daily bonus.
+    static func currentTierState() -> ActiveTierState {
+        let tier = loadActiveTier()
+        let completed = loadCompletedTiers().contains(tier)
+        return ActiveTierState(tier: tier, isInProgress: !completed)
+    }
+
+    /// Invoked after a session is saved to see if the session finalised the
+    /// active challenge. If so, awards completion + perfect bonuses (idempotently).
+    @discardableResult
+    static func finalizeIfCompleted(
+        tier: Int,
+        gamificationService: GamificationService
+    ) -> ChallengeCompletionReward? {
+        let tempVM = RoadMapViewModel(gamificationService: gamificationService)
+        tempVM.streakCount = gamificationService.getStreakCount()
+        tempVM.activeTierDays = tier
+        let snapshot = tempVM.buildChallenge(totalDays: tier)
+        guard snapshot.isFullyCompleted else { return nil }
+
+        let isPerfect = !gamificationService.isContinuityBroken(tier: tier)
+        let reward = gamificationService.awardChallengeCompletionIfNeeded(
+            tier: tier,
+            isPerfect: isPerfect
+        )
+        if reward.totalXP == 0 && reward.totalDrops == 0 {
+            // Already awarded previously.
+            return nil
+        }
+        markTierCompleted(tier)
+        return reward
     }
 }

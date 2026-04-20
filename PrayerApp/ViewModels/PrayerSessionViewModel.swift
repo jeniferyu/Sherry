@@ -15,8 +15,19 @@ final class PrayerSessionViewModel: ObservableObject {
     @Published var isInSession: Bool = false
     @Published var isFinished: Bool = false
     @Published var elapsedTime: TimeInterval = 0
-    @Published var newlyUnlockedDecorations: [Decoration] = []
     @Published var finishedSession: PrayerSession?
+
+    /// Reward breakdown for the session the user just finished. Used by the
+    /// end-of-session screen to show per-component earnings.
+    @Published var lastSessionReward: SessionRewardBreakdown?
+
+    /// Challenge completion + perfect bonus applied as a side effect of this
+    /// session, if the session completed an active challenge. `nil` otherwise.
+    @Published var lastChallengeReward: ChallengeCompletionReward?
+
+    /// Decorations that just became available to purchase as a result of the
+    /// level-up triggered by this session. Empty when nothing newly unlocked.
+    @Published var newlyAvailableDecorations: [Decoration] = []
 
     private var timer: Timer?
     private var sessionStartDate: Date?
@@ -86,10 +97,32 @@ final class PrayerSessionViewModel: ObservableObject {
         let itemsToSave = prayedItems.isEmpty ? sessionItems : prayedItems
         let session = sessionService.createSession(items: itemsToSave, duration: duration)
 
-        // Record gamification activity and check unlocks
+        // 1. Footprint for streaks / challenges / tree.
         gamificationService.recordDailyActivity(session: session)
-        let unlocked = gamificationService.checkUnlockConditions()
-        newlyUnlockedDecorations = unlocked
+
+        // 2. Per-session reward. The road-map view model knows whether a
+        //    challenge is currently in progress and which tier is active; we
+        //    snapshot that state here so this view model stays self-contained.
+        let tierState = RoadMapViewModel.currentTierState()
+        let breakdown = gamificationService.applySessionReward(
+            session,
+            tier: tierState.tier,
+            isChallengeInProgress: tierState.isInProgress
+        )
+        lastSessionReward = breakdown
+
+        // 3. Evaluate challenge completion (which may also grant a perfect bonus).
+        if let tier = tierState.tier {
+            lastChallengeReward = RoadMapViewModel.finalizeIfCompleted(
+                tier: tier,
+                gamificationService: gamificationService
+            )
+        } else {
+            lastChallengeReward = nil
+        }
+
+        // 4. Refresh "what can I buy now?" for the results screen.
+        newlyAvailableDecorations = gamificationService.availableDecorationsForPurchase()
 
         finishedSession = session
         return session
@@ -104,7 +137,9 @@ final class PrayerSessionViewModel: ObservableObject {
         isFinished = false
         elapsedTime = 0
         finishedSession = nil
-        newlyUnlockedDecorations = []
+        lastSessionReward = nil
+        lastChallengeReward = nil
+        newlyAvailableDecorations = []
     }
 
     // MARK: - Timer

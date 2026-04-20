@@ -30,7 +30,7 @@ struct PrayerFlowContainerView: View {
             if sessionVM.isFinished, let finished = sessionVM.finishedSession {
                 SessionCompleteView(
                     session: finished,
-                    newlyUnlocked: sessionVM.newlyUnlockedDecorations,
+                    newlyUnlocked: sessionVM.newlyAvailableDecorations,
                     onDismiss: {
                         showingSession = false
                         sessionVM.reset()

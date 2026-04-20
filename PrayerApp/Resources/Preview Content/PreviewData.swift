@@ -126,21 +126,27 @@ struct PreviewData {
 
         // MARK: - Decorations
 
-        let defaults: [(String, DecorationType, String)] = [
-            ("Golden Leaves",    .tree,       "streak_3"),
-            ("Autumn Palette",   .tree,       "streak_7"),
-            ("Winter Frost",     .tree,       "streak_30"),
-            ("Sunrise Sky",      .sky,        "sessions_5"),
-            ("Starry Night",     .sky,        "sessions_10"),
-            ("Aurora",           .sky,        "sessions_50"),
-            ("Wildflowers",      .background, "answered_1"),
-            ("Meadow Path",      .background, "answered_5"),
+        // Catalogue keyed to (level requirement, drop cost) — see §3.5.4.
+        let defaults: [(String, DecorationType, Int, Int)] = [
+            ("Small Plant",      .tree,        2,  10),
+            ("Golden Leaves",    .tree,        3,  15),
+            ("New Tree Skin",    .tree,        4,  25),
+            ("Autumn Palette",   .tree,        6,  40),
+            ("Sunrise Sky",      .sky,         2,  12),
+            ("Starry Night",     .sky,         5,  30),
+            ("Wildflowers",      .background,  3,  20),
+            ("Meadow Path",      .background,  5,  35),
         ]
 
-        for (name, type, condition) in defaults {
-            let d = Decoration.create(in: context, name: name, type: type, unlockCondition: condition)
-            // Unlock first two as examples
-            if name == "Golden Leaves" || name == "Wildflowers" {
+        for (name, type, level, cost) in defaults {
+            let d = Decoration.create(
+                in: context,
+                name: name,
+                type: type,
+                levelRequirement: level,
+                dropCost: cost
+            )
+            if name == "Small Plant" || name == "Sunrise Sky" {
                 d.isUnlocked = true
                 d.unlockedDate = Date()
             }

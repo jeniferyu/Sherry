@@ -52,7 +52,7 @@ struct PrayerListView: View {
             if sessionVM.isFinished, let session = sessionVM.finishedSession {
                 SessionCompleteView(
                     session: session,
-                    newlyUnlocked: sessionVM.newlyUnlockedDecorations,
+                    newlyUnlocked: sessionVM.newlyAvailableDecorations,
                     onDismiss: { showingSession = false; sessionVM.reset() }
                 )
             } else {

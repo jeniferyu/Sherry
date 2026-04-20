@@ -10,8 +10,10 @@
     </entity>
     <entity name="Decoration" representedClassName="Decoration" syncable="YES">
         <attribute name="decorationType" attributeType="String"/>
+        <attribute name="dropCost" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isUnlocked" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="levelRequirement" attributeType="Integer 16" defaultValueString="1" usesScalarValueType="YES"/>
         <attribute name="name" attributeType="String"/>
         <attribute name="unlockCondition" optional="YES" attributeType="String"/>
         <attribute name="unlockedDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -33,8 +35,10 @@
     </entity>
     <entity name="PrayerSession" representedClassName="PrayerSession" syncable="YES">
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dropsEarned" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="duration" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="xpEarned" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <relationship name="dailyRecord" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="DailyRecord" inverseName="sessions" inverseEntity="DailyRecord"/>
         <relationship name="items" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PrayerItem" inverseName="sessions" inverseEntity="PrayerItem"/>
     </entity>

@@ -31,6 +31,21 @@ extension PrayerSession {
         return "\(seconds)s"
     }
 
+    // MARK: - Reward Helpers
+
+    /// Distinct ACTS categories covered by the items in this session.
+    /// Used by `RewardCalculator` for the variety reward.
+    var coveredCategories: Set<PrayerCategory> {
+        Set(itemList.map(\.categoryEnum))
+    }
+
+    /// Applies a freshly computed reward breakdown to the session's stored fields.
+    /// The caller is responsible for saving the managing context.
+    func applyReward(_ breakdown: SessionRewardBreakdown) {
+        xpEarned = Int32(breakdown.totalXP)
+        dropsEarned = Int32(breakdown.totalDrops)
+    }
+
     // MARK: - Convenience Init
 
     @discardableResult
