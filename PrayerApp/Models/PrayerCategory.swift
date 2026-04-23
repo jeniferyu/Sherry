@@ -15,15 +15,6 @@ enum PrayerCategory: String, CaseIterable, Codable {
         }
     }
 
-    var shortName: String {
-        switch self {
-        case .adoration:    return "A"
-        case .confession:   return "C"
-        case .thanksgiving: return "T"
-        case .supplication: return "S"
-        }
-    }
-
     var iconName: String {
         switch self {
         case .adoration:    return "heart.fill"
@@ -50,12 +41,15 @@ enum PrayerCategory: String, CaseIterable, Codable {
         }
     }
 
+    /// Vibrant card-ready color, used as the fill for game-style list cards.
+    /// Mirrors the palette defined in `AppTheme.swift` so the whole UI stays
+    /// in sync if those tokens are re-tuned.
     var fallbackColor: Color {
         switch self {
-        case .adoration:    return Color(red: 0.90, green: 0.60, blue: 0.70)
-        case .confession:   return Color(red: 0.75, green: 0.65, blue: 0.85)
-        case .thanksgiving: return Color(red: 0.60, green: 0.80, blue: 0.65)
-        case .supplication: return Color(red: 0.65, green: 0.75, blue: 0.90)
+        case .adoration:    return .adorationColor
+        case .confession:   return .confessionColor
+        case .thanksgiving: return .thanksgivingColor
+        case .supplication: return .supplicationColor
         }
     }
 }

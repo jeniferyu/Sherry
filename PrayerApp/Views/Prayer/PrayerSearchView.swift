@@ -1,77 +1,19 @@
+import CoreData
 import SwiftUI
 
 struct PrayerSearchView: View {
     @StateObject private var viewModel = PrayerListViewModel()
-    @State private var showingFilters = false
+    @State private var pendingDeletePrayerID: NSManagedObjectID?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: AppIcons.search)
-                    .foregroundColor(Color.appTextTertiary)
-                TextField("Search prayers...", text: $viewModel.searchText)
-                    .font(AppFont.body())
-                    .onChange(of: viewModel.searchText) { _ in viewModel.searchAllPrayers() }
-
-                if !viewModel.searchText.isEmpty {
-                    Button {
-                        viewModel.searchText = ""
-                        viewModel.searchAllPrayers()
-                    } label: {
-                        Image(systemName: AppIcons.close)
-                            .foregroundColor(Color.appTextTertiary)
-                    }
-                }
-            }
-            .padding(AppSpacing.md)
-            .background(Color.appSurface)
-            .cornerRadius(AppRadius.lg)
-            .padding(.horizontal, AppSpacing.lg)
-            .padding(.vertical, AppSpacing.sm)
-
-            // Filter chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppSpacing.xs) {
-                    filterChip(
-                        label: "All Status",
-                        isActive: viewModel.statusFilter == nil,
-                        action: {
-                            viewModel.statusFilter = nil
-                            viewModel.searchAllPrayers()
-                        }
-                    )
-                    ForEach(PrayerStatus.allCases, id: \.self) { status in
-                        filterChip(
-                            label: status.displayName,
-                            icon: status.iconName,
-                            color: status.color,
-                            isActive: viewModel.statusFilter == status,
-                            action: {
-                                viewModel.statusFilter = (viewModel.statusFilter == status) ? nil : status
-                                viewModel.searchAllPrayers()
-                            }
-                        )
-                    }
-                    Divider().frame(height: 20)
-                    ForEach(PrayerCategory.allCases, id: \.self) { category in
-                        filterChip(
-                            label: category.displayName,
-                            icon: category.iconName,
-                            color: category.fallbackColor,
-                            isActive: viewModel.categoryFilter == category,
-                            action: {
-                                viewModel.categoryFilter = (viewModel.categoryFilter == category) ? nil : category
-                                viewModel.searchAllPrayers()
-                            }
-                        )
-                    }
-                }
+            gameSearchField
                 .padding(.horizontal, AppSpacing.lg)
-            }
-            .padding(.bottom, AppSpacing.xs)
+                .padding(.top, AppSpacing.sm)
+                .padding(.bottom, AppSpacing.xs)
 
-            // Results
+            filterScroll
+
             if viewModel.prayers.isEmpty {
                 EmptyStateView(
                     iconName: AppIcons.search,
@@ -79,49 +21,19 @@ struct PrayerSearchView: View {
                     message: "Try adjusting your search or filters."
                 )
             } else {
-                List {
-                    ForEach(viewModel.prayers) { prayer in
-                        NavigationLink(destination: PrayerDetailView(
-                            prayer: prayer,
-                            onStatusChange: { viewModel.updateStatus(prayer, status: $0) }
-                        )) {
-                            PrayerCardView(prayer: prayer)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button {
-                                viewModel.updateStatus(prayer, status: .answered)
-                            } label: {
-                                Label("Answered", systemImage: AppIcons.markAnswered)
-                            }
-                            .tint(.yellow)
-
-                            Button {
-                                viewModel.updateStatus(prayer, status: .archived)
-                            } label: {
-                                Label("Archive", systemImage: AppIcons.archive)
-                            }
-                            .tint(.gray)
-                        }
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                viewModel.updateStatus(prayer, status: .prayed)
-                            } label: {
-                                Label("Mark Prayed", systemImage: AppIcons.prayed)
-                            }
-                            .tint(Color.appPrimary)
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .background(Color.appBackground)
+                resultsList
             }
         }
-        .background(Color.appBackground.ignoresSafeArea())
-        .navigationTitle("Search Prayers")
+        .background(gameBackground.ignoresSafeArea())
+        .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarPlainBackButton()
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(gameBackground, for: .navigationBar)
+        .tint(Color.appPrimary)
+        .deletePrayerConfirmation(pendingID: $pendingDeletePrayerID) { prayer in
+            viewModel.deletePrayer(prayer)
+        }
         .onAppear {
             viewModel.isSearchMode = true
             viewModel.searchAllPrayers()
@@ -131,27 +43,167 @@ struct PrayerSearchView: View {
         }
     }
 
-    private func filterChip(
-        label: String,
-        icon: String? = nil,
-        color: Color = Color.appPrimary,
-        isActive: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: AppSpacing.xxs) {
-                if let icon {
-                    Image(systemName: icon).font(.system(size: 11))
-                }
-                Text(label).font(AppFont.caption())
+    // MARK: - Background
+
+    private var gameBackground: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.95, green: 0.98, blue: 0.96),
+                Color.appBackground,
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+
+    // MARK: - Search Field
+
+    private var gameSearchField: some View {
+        HStack(spacing: AppSpacing.sm) {
+            ZStack {
+                Circle()
+                    .fill(Color.appPrimary.opacity(0.12))
+                Image(systemName: AppIcons.search)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(Color.appPrimary)
             }
-            .foregroundColor(isActive ? .white : color)
-            .padding(.horizontal, AppSpacing.sm)
-            .padding(.vertical, AppSpacing.xs)
-            .background(isActive ? color : color.opacity(0.12))
-            .cornerRadius(AppRadius.full)
-            .contentShape(Capsule())
+            .frame(width: 36, height: 36)
+
+            TextField("Search prayers…", text: $viewModel.searchText)
+                .font(AppFont.body())
+                .textInputAutocapitalization(.sentences)
+                .onChange(of: viewModel.searchText) { _ in viewModel.searchAllPrayers() }
+
+            if !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.searchText = ""
+                    viewModel.searchAllPrayers()
+                } label: {
+                    Image(systemName: AppIcons.close)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(Color.appTextSecondary)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(Color.appSurfaceSecond))
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
+                .strokeBorder(Color.black.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 10, y: 4)
+    }
+
+    // MARK: - Filters
+
+    private var filterScroll: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: AppSpacing.xs) {
+                GameFilterChip(
+                    label: "All Status",
+                    tint: Color.appPrimary,
+                    isActive: viewModel.statusFilter == nil,
+                    action: {
+                        viewModel.statusFilter = nil
+                        viewModel.searchAllPrayers()
+                    }
+                )
+
+                ForEach(PrayerStatus.allCases, id: \.self) { status in
+                    GameFilterChip(
+                        label: status.displayName,
+                        tint: status.searchFilterChipTint,
+                        isActive: viewModel.statusFilter == status,
+                        systemIcon: status.iconName,
+                        action: {
+                            viewModel.statusFilter = (viewModel.statusFilter == status) ? nil : status
+                            viewModel.searchAllPrayers()
+                        }
+                    )
+                }
+
+                filterSectionDivider
+
+                ForEach(PrayerCategory.allCases, id: \.self) { category in
+                    GameFilterChip(
+                        label: category.displayName,
+                        tint: category.fallbackColor,
+                        isActive: viewModel.categoryFilter == category,
+                        systemIcon: category.isAssetIcon ? nil : category.iconName,
+                        assetIconName: category.isAssetIcon ? category.iconName : nil,
+                        action: {
+                            viewModel.categoryFilter = (viewModel.categoryFilter == category) ? nil : category
+                            viewModel.searchAllPrayers()
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.sm)
+        }
+    }
+
+    private var filterSectionDivider: some View {
+        Capsule()
+            .fill(Color.appTextTertiary.opacity(0.35))
+            .frame(width: 2, height: 22)
+    }
+
+    // MARK: - Results
+
+    private var resultsList: some View {
+        List {
+            ForEach(viewModel.prayers) { prayer in
+                ZStack {
+                    NavigationLink(destination: PrayerDetailView(
+                        prayer: prayer,
+                        onStatusChange: { viewModel.updateStatus(prayer, status: $0) },
+                        onAddToToday: { viewModel.addPersonalPrayerToToday(prayer) }
+                    )) { EmptyView() }
+                        .opacity(0)
+
+                    PrayerCardView(prayer: prayer)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 6, leading: AppSpacing.lg, bottom: 6, trailing: AppSpacing.lg))
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        pendingDeletePrayerID = prayer.objectID
+                    } label: {
+                        Label("Delete", systemImage: AppIcons.delete)
+                    }
+                    .tint(.red)
+
+                    if prayer.statusEnum != .archived {
+                        Button {
+                            viewModel.updateStatus(prayer, status: .archived)
+                        } label: {
+                            Label("Archive", systemImage: AppIcons.archive)
+                        }
+                        .tint(.gray)
+                    }
+                }
+                .swipeActions(edge: .leading) {
+                    Button {
+                        viewModel.updateStatus(prayer, status: .prayed)
+                    } label: {
+                        Label("Mark Prayed", systemImage: AppIcons.prayed)
+                    }
+                    .tint(Color.appPrimary)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
     }
 }
 
@@ -159,4 +211,5 @@ struct PrayerSearchView: View {
     NavigationStack {
         PrayerSearchView()
     }
+    .environment(\.managedObjectContext, PersistenceController.preview.viewContext)
 }

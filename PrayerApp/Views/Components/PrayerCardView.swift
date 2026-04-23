@@ -1,69 +1,99 @@
 import SwiftUI
 
-/// List row for personal prayers — matches the layout of `IntercessoryListView.intercessoryRow`.
+/// Game-style list row for personal prayers. The card is filled with the prayer's
+/// ACTS category color (coral / violet / mint / sky) and uses white content on top
+/// so the whole screen reads as a stack of vibrant quest cards — intentionally
+/// aligned with the Challenge and Tree tabs.
 struct PrayerCardView: View {
-    let prayer: PrayerItem
+    @ObservedObject var prayer: PrayerItem
     var isSelected: Bool = false
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            categoryIconCircle
+            categoryAvatar
 
-            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(prayer.title ?? "")
                     .font(AppFont.headline())
-                    .foregroundColor(Color.appTextPrimary)
+                    .foregroundColor(.white)
                     .lineLimit(1)
 
                 if let content = prayer.content, !content.isEmpty {
                     Text(content)
                         .font(AppFont.caption())
-                        .foregroundColor(Color.appTextSecondary)
+                        .foregroundColor(Color.white.opacity(0.85))
                         .lineLimit(1)
                 }
 
-                HStack(spacing: AppSpacing.xs) {
-                    Text(prayer.categoryEnum.displayName)
-                        .font(AppFont.caption2())
-                        .foregroundColor(Color.appTextTertiary)
-                    Text("\u{2022}")
-                        .foregroundColor(Color.appTextTertiary)
-                        .font(AppFont.caption2())
-                    Text("\(prayer.prayedCount)x prayed")
-                        .font(AppFont.caption2())
-                        .foregroundColor(Color.appTextTertiary)
+                HStack(spacing: 6) {
+                    statusChip
+                    GoldCountPill(
+                        icon: AppIcons.star,
+                        text: "\(prayer.prayedCount)"
+                    )
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            StatusIndicator(status: prayer.statusEnum, showLabel: false)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(Color.white.opacity(0.7))
         }
-        .padding(AppSpacing.md)
-        .cardStyle()
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm + 2)
+        .gameCardStyle(color: prayer.categoryEnum.fallbackColor)
         .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.lg)
-                .stroke(isSelected ? Color.appPrimary : Color.clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
+                .stroke(isSelected ? Color.appGameDark : Color.clear, lineWidth: 3)
         )
     }
 
-    private var categoryIconCircle: some View {
+    // MARK: - Subviews
+
+    private var categoryAvatar: some View {
         let cat = prayer.categoryEnum
-        return Group {
+        return ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
             if cat.isAssetIcon {
                 Image(cat.iconName)
                     .resizable()
                     .renderingMode(.template)
                     .scaledToFit()
-                    .frame(width: 20, height: 20)
+                    .frame(width: 22, height: 22)
+                    .foregroundColor(cat.fallbackColor)
             } else {
                 Image(systemName: cat.iconName)
-                    .font(.system(size: 18))
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(cat.fallbackColor)
             }
         }
-        .foregroundColor(Color.appPrimary)
-        .frame(width: 40, height: 40)
-        .background(Color.appPrimary.opacity(0.12))
-        .clipShape(Circle())
+        .frame(width: 48, height: 48)
     }
+
+    private var statusChip: some View {
+        HStack(spacing: 3) {
+            Image(systemName: prayer.statusEnum.iconName)
+                .font(.system(size: 10, weight: .bold))
+            Text(prayer.statusEnum.displayName)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(
+            Capsule().fill(Color.white.opacity(0.22))
+        )
+    }
+}
+
+#Preview {
+    VStack(spacing: 12) {
+        // Preview requires Core Data; rely on the list views for a full preview.
+        Text("PrayerCardView preview — see PrayerListView")
+            .font(AppFont.caption())
+    }
+    .padding()
 }

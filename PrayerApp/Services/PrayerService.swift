@@ -46,6 +46,8 @@ final class PrayerService: ObservableObject {
     // MARK: - Fetch
 
     /// Returns non-archived personal prayer items created today, sorted newest first.
+    /// Also includes non-intercessory items explicitly queued for today via
+    /// `addPersonalPrayerToToday` (from any `Prayed` / `Archived` / `Ongoing` source date).
     func fetchTodayPrayers() -> [PrayerItem] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
@@ -59,10 +61,64 @@ final class PrayerService: ObservableObject {
             endOfDay as CVarArg
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerItem.createdDate, ascending: false)]
+        let createdToday = (try? context.fetch(request)) ?? []
+
+        let queued = fetchPersonalPrayersQueued(
+            ids: PersonalTodayQueueTracker.queuedIdUUIDsAfterRevertingStale(using: self)
+        )
+        let merged = mergePrayerItems(createdToday, queued)
+        return merged
+    }
+
+    /// Puts a **personal** prayer on the Today list: status becomes `ongoing` (Unprayed), `prayedCount` unchanged.
+    /// Stashes the previous status; if the day ends while still `ongoing`, that status is restored
+    /// (see `PersonalTodayQueueTracker.processExpiredReverts`).
+    func addPersonalPrayerToToday(_ prayer: PrayerItem) {
+        guard !prayer.isIntercessory, prayer.statusEnum != .answered else { return }
+        if PersonalTodayQueueTracker.isPersonalItemOnTodayList(prayer) { return }
+        let previous = prayer.statusEnum
+        prayer.statusEnum = .ongoing
+        if let id = prayer.id {
+            PersonalTodayQueueTracker.mark(id, previousStatus: previous)
+        }
+        persistence.save()
+    }
+
+    func prayerItem(withId id: UUID) -> PrayerItem? {
+        let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try? context.fetch(request).first
+    }
+
+    fileprivate func fetchPersonalPrayersQueued(ids: [UUID]) -> [PrayerItem] {
+        guard !ids.isEmpty else { return [] }
+        let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "isIntercessory == NO AND id IN %@",
+            NSSet(array: ids)
+        )
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerItem.createdDate, ascending: false)]
         return (try? context.fetch(request)) ?? []
     }
 
+    fileprivate func mergePrayerItems(_ a: [PrayerItem], _ b: [PrayerItem]) -> [PrayerItem] {
+        var seen = Set<NSManagedObjectID>()
+        var out: [PrayerItem] = []
+        for item in a + b where !seen.contains(item.objectID) {
+            seen.insert(item.objectID)
+            out.append(item)
+        }
+        return out.sorted { ($0.createdDate ?? .distantPast) > ($1.createdDate ?? .distantPast) }
+    }
+
+    fileprivate func applyQueuedStatusRevert(_ prayer: PrayerItem, to status: PrayerStatus) {
+        prayer.statusEnum = status
+        persistence.save()
+    }
+
     /// Returns personal (non-intercessory) prayer items created in the given calendar month.
+    /// Archived items are excluded (Month list); use `searchPrayers` to find them in Search.
     func fetchMonthPrayers(month: Date) -> [PrayerItem] {
         let calendar = Calendar.current
         let comps = calendar.dateComponents([.year, .month], from: month)
@@ -71,8 +127,26 @@ final class PrayerService: ObservableObject {
 
         let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
         request.predicate = NSPredicate(
-            format: "isIntercessory == NO AND createdDate >= %@ AND createdDate < %@",
+            format: "isIntercessory == NO AND status != %@ AND createdDate >= %@ AND createdDate < %@",
+            PrayerStatus.archived.rawValue,
             start as CVarArg, end as CVarArg
+        )
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerItem.createdDate, ascending: false)]
+        return (try? context.fetch(request)) ?? []
+    }
+
+    /// Intercessory prayers the user explicitly added to today's session.
+    /// Filtering by today happens in `TodaySessionTracker`, which automatically drops
+    /// stale entries (yesterday or earlier) so the items reappear as addable again.
+    func fetchIntercessoryItemsAddedToday() -> [PrayerItem] {
+        let ids = TodaySessionTracker.addedIDsToday()
+        guard !ids.isEmpty else { return [] }
+
+        let request: NSFetchRequest<PrayerItem> = PrayerItem.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "isIntercessory == YES AND status != %@ AND id IN %@",
+            PrayerStatus.archived.rawValue,
+            NSSet(array: Array(ids))
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \PrayerItem.createdDate, ascending: false)]
         return (try? context.fetch(request)) ?? []
@@ -135,6 +209,9 @@ final class PrayerService: ObservableObject {
         if status == .answered || status == .prayed {
             prayer.lastPrayedDate = Date()
         }
+        if status != .ongoing, let id = prayer.id, !prayer.isIntercessory {
+            PersonalTodayQueueTracker.remove(id)
+        }
         persistence.save()
     }
 
@@ -144,6 +221,9 @@ final class PrayerService: ObservableObject {
         // Automatically move to "prayed" if still ongoing
         if prayer.statusEnum == .ongoing {
             prayer.statusEnum = .prayed
+        }
+        if let id = prayer.id, !prayer.isIntercessory {
+            PersonalTodayQueueTracker.remove(id)
         }
         persistence.save()
     }
@@ -165,7 +245,149 @@ final class PrayerService: ObservableObject {
     // MARK: - Delete
 
     func deletePrayer(_ prayer: PrayerItem) {
+        if let id = prayer.id {
+            if prayer.isIntercessory {
+                TodaySessionTracker.remove(id)
+            } else {
+                PersonalTodayQueueTracker.remove(id)
+            }
+        }
         context.delete(prayer)
         persistence.save()
+    }
+}
+
+// MARK: - Personal prayer → Today list queue
+//
+// When a personal prayer (non-intercessory) is added to Today, we set status to `ongoing`
+// and record the previous status. If the new day begins while the item is still `ongoing` and
+// the user has not actually prayed in session, we restore the previous status (often `prayed` or
+// `archived`); if they have prayed, `incrementPrayedCount` / `updatePrayerStatus` already cleared the entry.
+enum PersonalTodayQueueTracker {
+    private static let key = "personalPrayerTodayQueue.v1"
+
+    private static var calendar: Calendar { Calendar.current }
+
+    private static func startOfDay(_ d: Date) -> Date { calendar.startOfDay(for: d) }
+
+    private static func load() -> [String: String] {
+        (UserDefaults.standard.dictionary(forKey: key) as? [String: String]) ?? [:]
+    }
+
+    private static func save(_ dict: [String: String]) {
+        UserDefaults.standard.set(dict, forKey: key)
+    }
+
+    private static func parse(_ raw: String) -> (queueDay: Date, previous: PrayerStatus)? {
+        let parts = raw.split(separator: "|", maxSplits: 1).map { String($0) }
+        guard parts.count == 2,
+              let time = TimeInterval(parts[0]),
+              let prev = PrayerStatus(rawValue: parts[1]) else { return nil }
+        return (Date(timeIntervalSince1970: time), prev)
+    }
+
+    static func mark(_ id: UUID, previousStatus: PrayerStatus) {
+        var d = load()
+        let t = startOfDay(Date()).timeIntervalSince1970
+        d[id.uuidString] = "\(t)|\(previousStatus.rawValue)"
+        save(d)
+    }
+
+    static func remove(_ id: UUID) {
+        var d = load()
+        d.removeValue(forKey: id.uuidString)
+        save(d)
+    }
+
+    /// `true` if this personal prayer is already on the Today tab (created today, or explicit queue for today).
+    static func isPersonalItemOnTodayList(_ item: PrayerItem) -> Bool {
+        guard !item.isIntercessory, item.id != nil else { return false }
+        if let created = item.createdDate, calendar.isDateInToday(created) { return true }
+        if let id = item.id, let raw = load()[id.uuidString], let (qDay, _) = parse(raw) {
+            if calendar.isDateInToday(qDay) { return true }
+        }
+        return false
+    }
+
+    static func queuedIdUUIDsAfterRevertingStale(using service: PrayerService) -> [UUID] {
+        processExpiredReverts(using: service)
+        return load().keys.compactMap { UUID(uuidString: $0) }
+    }
+
+    fileprivate static func processExpiredReverts(using service: PrayerService) {
+        var d = load()
+        let startOfNow = startOfDay(Date())
+        for k in Array(d.keys) {
+            guard let v = d[k], let (qStart, previous) = parse(v) else {
+                d.removeValue(forKey: k)
+                continue
+            }
+            if startOfDay(qStart) < startOfNow, let id = UUID(uuidString: k), let p = service.prayerItem(withId: id) {
+                if p.statusEnum == .ongoing, !p.isIntercessory {
+                    service.applyQueuedStatusRevert(p, to: previous)
+                }
+                d.removeValue(forKey: k)
+            }
+        }
+        save(d)
+    }
+}
+
+// MARK: - Intercession → "Today's Session" tracker
+//
+// Persists (in `UserDefaults`) which intercessory items the user explicitly added
+// to today's prayer session. Entries are filtered to today's date on every read,
+// so once the calendar day rolls over an item becomes addable again and stops
+// appearing in `fetchIntercessoryItemsAddedToday()` / the review toggle.
+enum TodaySessionTracker {
+    private static let storageKey = "intercessoryAddedToTodaySession.v1"
+    private static let isoFormatter = ISO8601DateFormatter()
+
+    /// Marks an intercessory item as added to today's session.
+    static func markAdded(_ id: UUID?) {
+        guard let id else { return }
+        var dict = prunedStorage()
+        dict[id.uuidString] = isoFormatter.string(from: Date())
+        UserDefaults.standard.set(dict, forKey: storageKey)
+    }
+
+    /// `true` when the given item id was added to today's session (and the day hasn't rolled over).
+    static func isAddedToday(_ id: UUID?) -> Bool {
+        guard let id else { return false }
+        return addedIDsToday().contains(id)
+    }
+
+    /// Ids that are currently "added today". Callers typically pass these into a Core Data fetch.
+    static func addedIDsToday() -> Set<UUID> {
+        var ids = Set<UUID>()
+        for (key, _) in prunedStorage() {
+            if let uuid = UUID(uuidString: key) {
+                ids.insert(uuid)
+            }
+        }
+        return ids
+    }
+
+    /// Reads storage and removes any stale entries (not from today). Writes back if pruning happened.
+    static func remove(_ id: UUID) {
+        var dict = prunedStorage()
+        dict.removeValue(forKey: id.uuidString)
+        UserDefaults.standard.set(dict, forKey: storageKey)
+    }
+
+    @discardableResult
+    private static func prunedStorage() -> [String: String] {
+        let raw = UserDefaults.standard.dictionary(forKey: storageKey) as? [String: String] ?? [:]
+        let calendar = Calendar.current
+        var pruned: [String: String] = [:]
+        for (key, dateStr) in raw {
+            guard let date = isoFormatter.date(from: dateStr),
+                  calendar.isDateInToday(date) else { continue }
+            pruned[key] = dateStr
+        }
+        if pruned.count != raw.count {
+            UserDefaults.standard.set(pruned, forKey: storageKey)
+        }
+        return pruned
     }
 }

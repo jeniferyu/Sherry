@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct PrayerDetailView: View {
-    let prayer: PrayerItem
+    @ObservedObject var prayer: PrayerItem
     var onStatusChange: ((PrayerStatus) -> Void)?
+    var onAddToToday: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
 
@@ -50,9 +51,9 @@ struct PrayerDetailView: View {
                 HStack(spacing: AppSpacing.md) {
                     metaItem(icon: "clock", label: "Created", value: prayer.formattedCreatedDate)
                     if let lastPrayed = prayer.formattedLastPrayedDate {
-                        metaItem(icon: "checkmark.circle", label: "Last Prayed", value: lastPrayed)
+                        metaItem(icon: AppIcons.statLastPrayed, label: "Last Prayed", value: lastPrayed)
                     }
-                    metaItem(icon: "prayingHands", label: "Times Prayed", value: "\(prayer.prayedCount)", isAssetImage: true)
+                    metaItem(icon: AppIcons.statTimesPrayed, label: "Times Prayed", value: "\(prayer.prayedCount)")
                 }
                 .padding(.horizontal, AppSpacing.lg)
 
@@ -90,7 +91,23 @@ struct PrayerDetailView: View {
                             .primaryButtonStyle()
                         }
 
-                        if prayer.statusEnum != .archived {
+                        if !prayer.isIntercessory, prayer.statusEnum != .answered, let addToToday = onAddToToday {
+                            Button {
+                                addToToday()
+                                dismiss()
+                            } label: {
+                                Label(
+                                    PersonalTodayQueueTracker.isPersonalItemOnTodayList(prayer)
+                                        ? "Already in Today's list" : "Add to Today's Session",
+                                    systemImage: PersonalTodayQueueTracker.isPersonalItemOnTodayList(prayer)
+                                        ? "checkmark.circle.fill" : AppIcons.addToToday
+                                )
+                            }
+                            .secondaryButtonStyle()
+                            .disabled(PersonalTodayQueueTracker.isPersonalItemOnTodayList(prayer))
+                        }
+
+                        if prayer.statusEnum != .archived, prayer.statusEnum != .answered {
                             Button {
                                 onStatusChange(.archived)
                                 dismiss()
@@ -108,6 +125,7 @@ struct PrayerDetailView: View {
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Prayer Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarPlainBackButton()
     }
 
     private func metaItem(icon: String, label: String, value: String, isAssetImage: Bool = false) -> some View {

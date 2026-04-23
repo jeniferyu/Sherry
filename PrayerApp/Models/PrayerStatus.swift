@@ -33,6 +33,16 @@ enum PrayerStatus: String, CaseIterable, Codable {
         }
     }
 
+    /// Tint for status filter chips on search screens (prayer + intercession lists).
+    var searchFilterChipTint: Color {
+        switch self {
+        case .ongoing:  return .orange
+        case .prayed:   return Color(red: 0.48, green: 0.82, blue: 0.60)
+        case .answered: return .yellow
+        case .archived: return .gray
+        }
+    }
+
     /// Returns true when the item should appear in the active Today list
     var isActive: Bool {
         self == .ongoing || self == .prayed

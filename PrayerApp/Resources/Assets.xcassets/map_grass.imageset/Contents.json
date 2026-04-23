@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "road_tree_1.png",
+      "filename" : "map_grass.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "road_tree_1@2x.png",
+      "filename" : "map_grass@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "road_tree_1@3x.png",
+      "filename" : "map_grass@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

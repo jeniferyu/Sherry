@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PrayerStyleSelectionView: View {
     @ObservedObject var viewModel: ACTSFlowViewModel
+    @State private var showingACTSIntro = false
 
     var body: some View {
         ScrollView {
@@ -27,8 +28,8 @@ struct PrayerStyleSelectionView: View {
                     styleCard(
                         icon: "list.bullet.rectangle.portrait",
                         iconColor: Color.appPrimary,
-                        title: "Complete ACTS Prayer",
-                        subtitle: "Follow the full Adoration, Confession,\nThanksgiving & Supplication structure",
+                        title: "ACTS prayer",
+                        subtitle: "Begin a guided ACTS prayer session",
                         action: { viewModel.selectACTS() }
                     )
 
@@ -42,10 +43,44 @@ struct PrayerStyleSelectionView: View {
                 }
                 .padding(.horizontal, AppSpacing.lg)
 
-                Spacer(minLength: AppSpacing.xl)
+                actsInfoLink
+                    .padding(.top, AppSpacing.xl)
+                    .padding(.bottom, AppSpacing.lg)
+
+                Spacer(minLength: AppSpacing.md)
             }
         }
         .background(Color.appBackground.ignoresSafeArea())
+        .sheet(isPresented: $showingACTSIntro) {
+            ACTSIntroView()
+        }
+    }
+
+    /// Small, clearly tappable affordance at the bottom of the style screen.
+    private var actsInfoLink: some View {
+        Button {
+            showingACTSIntro = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("What is ACTS?")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+            }
+            .foregroundColor(Color.appPrimary)
+            .padding(.horizontal, AppSpacing.md)
+            .padding(.vertical, AppSpacing.sm + 2)
+            .background(
+                Capsule()
+                    .fill(Color.appPrimary.opacity(0.12))
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(Color.appPrimary.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens an introduction to ACTS prayer")
     }
 
     private func styleCard(

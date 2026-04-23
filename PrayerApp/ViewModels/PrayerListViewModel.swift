@@ -62,11 +62,9 @@ final class PrayerListViewModel: ObservableObject {
 
     // MARK: - Search (all prayers, no date scope)
 
+    /// Loads personal (non-intercessory) prayers, filtered by optional text, status, and category.
+    /// When everything is empty / "All", shows the full list—same idea as the Intercession search screen.
     func searchAllPrayers() {
-        if searchText.isEmpty && statusFilter == nil && categoryFilter == nil {
-            prayers = []
-            return
-        }
         var filters = FilterCriteria()
         filters.statusFilter = statusFilter
         filters.categoryFilter = categoryFilter
@@ -100,8 +98,14 @@ final class PrayerListViewModel: ObservableObject {
         isSearchMode ? searchAllPrayers() : fetchPrayers()
     }
 
-    func addToToday(_ prayer: PrayerItem) {
-        prayerService.updatePrayerStatus(prayer, status: .ongoing)
+    func addPersonalPrayerToToday(_ prayer: PrayerItem) {
+        prayerService.addPersonalPrayerToToday(prayer)
+        isSearchMode ? searchAllPrayers() : fetchPrayers()
+    }
+
+    func deletePrayer(_ prayer: PrayerItem) {
+        prayerService.deletePrayer(prayer)
+        selectedPrayers.remove(prayer.objectID)
         isSearchMode ? searchAllPrayers() : fetchPrayers()
     }
 

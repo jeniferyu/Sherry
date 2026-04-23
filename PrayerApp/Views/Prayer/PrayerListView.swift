@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 struct PrayerListView: View {
     @StateObject private var viewModel = PrayerListViewModel()
@@ -7,47 +8,67 @@ struct PrayerListView: View {
     @State private var showingAddPrayer = false
     @State private var showingSearch = false
     @State private var showingSession = false
+    @State private var pendingDeletePrayerID: NSManagedObjectID?
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                prayersHeader
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 0) {
+                    prayersHeader
 
-                // Tab Picker
-                Picker("View", selection: $viewModel.selectedTab) {
-                    ForEach(ListTab.allCases, id: \.self) { tab in
-                        Text(tab.rawValue).tag(tab)
+                    // Custom segmented pill — game-style.
+                    GameSegmentedPicker(
+                        selection: $viewModel.selectedTab,
+                        options: ListTab.allCases,
+                        label: \.rawValue
+                    )
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.top, AppSpacing.xs)
+                    .padding(.bottom, AppSpacing.sm)
+                    .onChange(of: viewModel.selectedTab) { _ in viewModel.fetchPrayers() }
+
+                    categoryFilterBar
+
+                    if viewModel.prayers.isEmpty {
+                        EmptyStateView(
+                            iconName: AppIcons.prayers,
+                            isAssetImage: true,
+                            title: "No Prayers",
+                            message: viewModel.selectedTab == .today
+                                ? "Add a prayer to begin today's journey."
+                                : "No prayers this month yet.",
+                            actionTitle: "Add Prayer",
+                            action: { showingAddPrayer = true }
+                        )
+                    } else {
+                        prayerList
                     }
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.vertical, AppSpacing.sm)
-                .onChange(of: viewModel.selectedTab) { _ in viewModel.fetchPrayers() }
 
-                // Category Filter Bar
-                categoryFilterBar
-
-                // Content
-                if viewModel.prayers.isEmpty {
-                    EmptyStateView(
-                        iconName: AppIcons.prayers,
-                        isAssetImage: true,
-                        title: "No Prayers",
-                        message: viewModel.selectedTab == .today
-                            ? "Add a prayer or start praying to see items here."
-                            : "No prayers this month yet.",
-                        actionTitle: "Add Prayer",
-                        action: { showingAddPrayer = true }
-                    )
-                } else {
-                    prayerList
+                if viewModel.isSelectMode && !viewModel.selectedPrayers.isEmpty {
+                    startPrayingFloatingButton
                 }
             }
-            .background(Color.appBackground.ignoresSafeArea())
+            .background(gameBackground.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
+        .deletePrayerConfirmation(pendingID: $pendingDeletePrayerID) { prayer in
+            viewModel.deletePrayer(prayer)
+        }
         .onAppear { viewModel.fetchPrayers() }
-        .sheet(isPresented: $showingAddPrayer) { AddPrayerView() }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .NSManagedObjectContextDidSave,
+                object: PersistenceController.shared.viewContext
+            )
+        ) { _ in
+            viewModel.fetchPrayers()
+        }
+        .sheet(isPresented: $showingAddPrayer, onDismiss: {
+            viewModel.fetchPrayers()
+        }) {
+            AddPrayerView(startWithCaptureForm: true)
+        }
         .fullScreenCover(isPresented: $showingSession) {
             if sessionVM.isFinished, let session = sessionVM.finishedSession {
                 SessionCompleteView(
@@ -63,66 +84,78 @@ struct PrayerListView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Header
 
     private var prayersHeader: some View {
-        VStack(spacing: AppSpacing.xs) {
+        HStack(alignment: .center, spacing: AppSpacing.sm) {
+            Button {
+                viewModel.isSelectMode.toggle()
+                if !viewModel.isSelectMode { viewModel.clearSelection() }
+            } label: {
+                Text(viewModel.isSelectMode ? "Cancel" : "Select")
+                    .font(AppFont.subheadline())
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color.appPrimary)
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule().fill(Color.white)
+                    )
+                    .overlay(
+                        Capsule().strokeBorder(Color.appPrimary.opacity(0.25), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
             Text("Prayers")
                 .font(AppFont.largeTitle())
                 .foregroundColor(Color.appTextPrimary)
-                .frame(maxWidth: .infinity, alignment: .center)
 
-            HStack(spacing: AppSpacing.sm) {
-                Button {
-                    viewModel.isSelectMode.toggle()
-                    if !viewModel.isSelectMode { viewModel.clearSelection() }
-                } label: {
-                    Text(viewModel.isSelectMode ? "Cancel" : "Select")
-                        .font(AppFont.subheadline())
-                        .foregroundColor(Color.appPrimary)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+            Spacer()
 
-                Spacer(minLength: 0)
-
-                NavigationLink(destination: PrayerCalendarView()) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 19, weight: .medium))
-                        .foregroundColor(Color.appPrimary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                NavigationLink(destination: PrayerSearchView()) {
-                    Image(systemName: AppIcons.search)
-                        .font(.system(size: 19, weight: .medium))
-                        .foregroundColor(Color.appPrimary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            headerIconButton(systemName: "calendar", destination: AnyView(PrayerCalendarView()))
+            headerIconButton(systemName: AppIcons.search, destination: AnyView(PrayerSearchView()))
         }
-        .frame(maxWidth: .infinity)
         .padding(.horizontal, AppSpacing.lg)
         .padding(.top, AppSpacing.md)
-        .padding(.bottom, AppSpacing.xxs)
+        .padding(.bottom, AppSpacing.xs)
     }
+
+    private func headerIconButton(systemName: String, destination: AnyView) -> some View {
+        NavigationLink(destination: destination) {
+            Image(systemName: systemName)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(Color.appPrimary)
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle().fill(Color.white)
+                )
+                .overlay(
+                    Circle().strokeBorder(Color.appPrimary.opacity(0.2), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.05), radius: 3, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Filter Chips
 
     private var categoryFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.xs) {
-                chipButton(label: "All", isActive: viewModel.categoryFilter == nil) {
+                GameFilterChip(
+                    label: "All",
+                    tint: Color.appPrimary,
+                    isActive: viewModel.categoryFilter == nil
+                ) {
                     viewModel.filterByCategory(nil)
                 }
                 ForEach(PrayerCategory.allCases, id: \.self) { cat in
-                    chipButton(
-                        label: cat.shortName,
-                        color: cat.fallbackColor,
+                    GameFilterChip(
+                        label: cat.displayName,
+                        tint: cat.fallbackColor,
                         isActive: viewModel.categoryFilter == cat
                     ) {
                         viewModel.filterByCategory(cat)
@@ -130,52 +163,61 @@ struct PrayerListView: View {
                 }
             }
             .padding(.horizontal, AppSpacing.lg)
-            .padding(.vertical, AppSpacing.xs)
+            .padding(.vertical, AppSpacing.xxs)
         }
     }
 
+    // MARK: - List
+
     private var prayerList: some View {
-        ZStack(alignment: .bottom) {
-            List {
-                ForEach(viewModel.prayers) { prayer in
-                    if viewModel.isSelectMode {
-                        Button {
-                            viewModel.toggleSelection(for: prayer)
-                        } label: {
-                            HStack {
-                                Image(systemName: viewModel.selectedPrayers.contains(prayer.objectID)
-                                    ? "checkmark.circle.fill"
-                                    : "circle")
-                                    .foregroundColor(Color.appPrimary)
-                                    .font(.system(size: 22))
-                                PrayerCardView(
-                                    prayer: prayer,
-                                    isSelected: viewModel.selectedPrayers.contains(prayer.objectID)
-                                )
-                            }
+        List {
+            ForEach(viewModel.prayers) { prayer in
+                if viewModel.isSelectMode {
+                    Button {
+                        viewModel.toggleSelection(for: prayer)
+                    } label: {
+                        HStack(spacing: AppSpacing.sm) {
+                            Image(systemName: viewModel.selectedPrayers.contains(prayer.objectID)
+                                ? "checkmark.circle.fill"
+                                : "circle")
+                                .foregroundColor(Color.appPrimary)
+                                .font(.system(size: 22))
+                            PrayerCardView(
+                                prayer: prayer,
+                                isSelected: viewModel.selectedPrayers.contains(prayer.objectID)
+                            )
                         }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                    } else {
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 6, leading: AppSpacing.lg, bottom: 6, trailing: AppSpacing.lg))
+                    .listRowSeparator(.hidden)
+                } else {
+                    ZStack {
                         NavigationLink(destination: PrayerDetailView(
                             prayer: prayer,
                             onStatusChange: { status in
                                 viewModel.updateStatus(prayer, status: status)
+                            },
+                            onAddToToday: {
+                                viewModel.addPersonalPrayerToToday(prayer)
                             }
-                        )) {
-                            PrayerCardView(prayer: prayer)
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button {
-                                viewModel.updateStatus(prayer, status: .answered)
-                            } label: {
-                                Label("Answered", systemImage: AppIcons.markAnswered)
-                            }
-                            .tint(.yellow)
+                        )) { EmptyView() }
+                            .opacity(0)
 
+                        PrayerCardView(prayer: prayer)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 6, leading: AppSpacing.lg, bottom: 6, trailing: AppSpacing.lg))
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            pendingDeletePrayerID = prayer.objectID
+                        } label: {
+                            Label("Delete", systemImage: AppIcons.delete)
+                        }
+                        .tint(.red)
+
+                        if prayer.statusEnum != .archived {
                             Button {
                                 viewModel.updateStatus(prayer, status: .archived)
                             } label: {
@@ -183,63 +225,106 @@ struct PrayerListView: View {
                             }
                             .tint(.gray)
                         }
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                viewModel.updateStatus(prayer, status: .prayed)
-                            } label: {
-                                Label("Mark Prayed", systemImage: AppIcons.prayed)
-                            }
-                            .tint(Color.appPrimary)
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            viewModel.updateStatus(prayer, status: .prayed)
+                        } label: {
+                            Label("Mark Prayed", systemImage: AppIcons.prayed)
                         }
+                        .tint(Color.appPrimary)
                     }
                 }
             }
-            .listStyle(.plain)
-            .background(Color.appBackground)
-
-            // Start Praying button (shown in select mode with selection)
-            if viewModel.isSelectMode && !viewModel.selectedPrayers.isEmpty {
-                Button {
-                    let items = viewModel.selectedItems()
-                    sessionVM.startSession(items: items)
-                    viewModel.clearSelection()
-                    showingSession = true
-                } label: {
-                    Label("Start Praying (\(viewModel.selectedPrayers.count))", image: "prayingHands")
-                }
-                .primaryButtonStyle()
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.bottom, AppSpacing.lg)
-                .background(
-                    LinearGradient(
-                        colors: [Color.appBackground.opacity(0), Color.appBackground],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 100)
-                    .offset(y: -50)
-                )
-            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+        .safeAreaInset(edge: .bottom) {
+            // Keep space below the floating tab bar + start button.
+            Color.clear.frame(height: 100)
         }
     }
 
-    private func chipButton(
-        label: String,
-        color: Color = Color.appPrimary,
-        isActive: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(AppFont.caption())
-                .fontWeight(isActive ? .semibold : .regular)
-                .foregroundColor(isActive ? .white : color)
-                .padding(.horizontal, AppSpacing.md)
-                .padding(.vertical, AppSpacing.xxs + 2)
-                .background(isActive ? color : color.opacity(0.12))
-                .cornerRadius(AppRadius.full)
-                .contentShape(Capsule())
+    private var startPrayingFloatingButton: some View {
+        Button {
+            let items = viewModel.selectedItems()
+            sessionVM.startSession(items: items)
+            viewModel.clearSelection()
+            showingSession = true
+        } label: {
+            HStack(spacing: AppSpacing.xs) {
+                Image("prayingHands")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                Text("Start Praying (\(viewModel.selectedPrayers.count))")
+            }
         }
+        .gameCTAButtonStyle(color: .appPrimary)
+        .padding(.horizontal, AppSpacing.lg)
+        .padding(.bottom, 100)   // Above the custom tab bar.
+    }
+
+    // Soft vertical gradient keeps the list feeling like a "page" in a game,
+    // consistent with the Challenge and Tree tabs.
+    private var gameBackground: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.95, green: 0.98, blue: 0.96),
+                Color.appBackground,
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+// MARK: - Shared Pickers
+
+/// A pill-style segmented picker that matches the game-style cards.
+/// Reusable across PrayerListView and IntercessoryListView.
+struct GameSegmentedPicker<Option: Hashable>: View {
+    @Binding var selection: Option
+    let options: [Option]
+    let label: (Option) -> String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(options, id: \.self) { option in
+                Button {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                        selection = option
+                    }
+                } label: {
+                    Text(label(option))
+                        .font(AppFont.subheadline())
+                        .fontWeight(.semibold)
+                        .foregroundColor(selection == option ? .white : Color.appTextSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(selection == option ? Color.appPrimary : Color.clear)
+                                .shadow(
+                                    color: selection == option ? Color.appPrimary.opacity(0.25) : .clear,
+                                    radius: 4, y: 2
+                                )
+                        )
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(
+            Capsule().fill(Color.white)
+        )
+        .overlay(
+            Capsule().strokeBorder(Color.black.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 6, y: 2)
     }
 }
 

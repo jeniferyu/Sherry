@@ -5,41 +5,54 @@ struct ACTSReviewView: View {
     /// Called when user taps "Start Prayer Session" with the items to pray over.
     var onStartSession: ([PrayerItem]) -> Void
 
+    @State private var showEmptySessionCard = false
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: AppSpacing.lg) {
-                // Header
-                reviewHeader
+        ZStack {
+            ScrollView {
+                VStack(spacing: AppSpacing.lg) {
+                    // Header
+                    reviewHeader
 
-                // ACTS items per category
-                ForEach(orderedCategories, id: \.self) { category in
-                    if let drafts = viewModel.collectedDrafts[category], !drafts.isEmpty {
-                        categorySection(category: category, drafts: drafts)
+                    // ACTS items per category
+                    ForEach(orderedCategories, id: \.self) { category in
+                        if let drafts = viewModel.collectedDrafts[category], !drafts.isEmpty {
+                            categorySection(category: category, drafts: drafts)
+                        }
                     }
-                }
 
-                // Today's Prayers toggle (only if there are saved items)
-                if !viewModel.todayPrayers.isEmpty {
-                    todayPrayersSection
-                }
+                    // Today's Prayers toggle (only if there are saved items)
+                    if !viewModel.todayPrayers.isEmpty {
+                        todayPrayersSection
+                    }
 
-                // Start Session button
-                let hasItems = viewModel.totalDraftCount > 0 || viewModel.includeTodayPrayers
-                Button {
-                    let items = viewModel.buildSessionItems()
-                    onStartSession(items)
-                } label: {
-                    Text("Start Prayer Session")
+                    // Start Session — enabled when there is real content; tap when empty shows a card (not `include` alone).
+                    let canStart = viewModel.hasSessionContentToStart
+                    Button {
+                        if canStart {
+                            onStartSession(viewModel.buildSessionItems())
+                        } else {
+                            showEmptySessionCard = true
+                        }
+                    } label: {
+                        Text("Start Prayer Session")
+                    }
+                    .primaryButtonStyle()
+                    .opacity(canStart ? 1 : 0.48)
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.bottom, AppSpacing.xl)
                 }
-                .primaryButtonStyle()
-                .disabled(!hasItems)
-                .opacity(hasItems ? 1 : 0.45)
-                .padding(.horizontal, AppSpacing.lg)
-                .padding(.bottom, AppSpacing.xl)
+                .padding(.top, AppSpacing.md)
             }
-            .padding(.top, AppSpacing.md)
+            .background(Color.appBackground.ignoresSafeArea())
+
+            if showEmptySessionCard {
+                emptySessionBlockCard
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    .zIndex(50)
+            }
         }
-        .background(Color.appBackground.ignoresSafeArea())
+        .animation(.spring(response: 0.4, dampingFraction: 0.86), value: showEmptySessionCard)
     }
 
     // MARK: - Header
@@ -133,7 +146,11 @@ struct ACTSReviewView: View {
                     VStack(spacing: AppSpacing.xs) {
                         ForEach(viewModel.todayPrayers, id: \.objectID) { item in
                             HStack {
-                                CategoryBadge(category: item.categoryEnum, compact: true)
+                                if item.isIntercessory, let group = item.intercessoryGroupEnum {
+                                    IntercessoryGroupBadge(group: group, compact: true)
+                                } else {
+                                    CategoryBadge(category: item.categoryEnum, compact: true)
+                                }
                                 Text(item.title ?? "")
                                     .font(AppFont.caption())
                                     .foregroundColor(Color.appTextPrimary)
@@ -148,6 +165,69 @@ struct ACTSReviewView: View {
                     }
                 }
             }
+            .padding(.horizontal, AppSpacing.lg)
+        }
+    }
+
+    // MARK: - Empty session (no drafts, today not included)
+
+    private var emptySessionBlockCard: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { withAnimation { showEmptySessionCard = false } }
+
+            VStack(spacing: AppSpacing.md) {
+                ZStack {
+                    Circle()
+                        .fill(Color.appPrimary.opacity(0.14))
+                    Image(systemName: "hands.sparkles.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(Color.appPrimary)
+                }
+                .frame(width: 64, height: 64)
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
+                )
+                .shadow(color: Color.appPrimary.opacity(0.2), radius: 8, y: 3)
+
+                Text("Add a prayer to start")
+                    .font(AppFont.title2())
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(Color.appTextPrimary)
+
+                Text("There are no items in this session yet. Go back to any ACTS step and add at least one prayer, or turn on “Include Today’s Saved Prayers” to bring in what you already saved for today.")
+                    .font(AppFont.subheadline())
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(Color.appTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    withAnimation { showEmptySessionCard = false }
+                } label: {
+                    Text("OK")
+                }
+                .primaryButtonStyle()
+                .padding(.top, AppSpacing.xs)
+            }
+            .padding(AppSpacing.lg)
+            .frame(maxWidth: 340)
+            .background(
+                RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
+                    .fill(Color.appSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.xl, style: .continuous)
+                    .strokeBorder(Color.appPrimary.opacity(0.18), lineWidth: 1.5)
+            )
+            .shadow(
+                color: AppShadow.gameCardShadow.color,
+                radius: 20,
+                x: 0,
+                y: 10
+            )
             .padding(.horizontal, AppSpacing.lg)
         }
     }

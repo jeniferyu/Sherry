@@ -17,20 +17,21 @@ struct RoadMapView: View {
     /// outer section transition takes over.
     private let mapBoundaryDragTrigger: CGFloat = 44
 
-    /// Soft mint panel behind “Choose Your Next Challenge” and “Your Journey” (lighter than the main green).
+    /// Soft mint — aligned with `appBackground` / list screens; lower chroma than the old roadmap green.
     private var challengesLightSectionBackground: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.91, green: 0.97, blue: 0.93),
-                Color(red: 0.85, green: 0.95, blue: 0.89),
-                Color(red: 0.80, green: 0.93, blue: 0.86),
+                Color(red: 0.95, green: 0.98, blue: 0.96),
+                Color(red: 0.93, green: 0.97, blue: 0.94),
+                Color.appBackground,
             ],
             startPoint: .top,
             endPoint: .bottom
         )
     }
 
-    private let challengesAccentGreen = Color(red: 0.28, green: 0.48, blue: 0.32)
+    /// Muted sage (less saturated than before) for labels and page dots.
+    private let challengesAccentGreen = Color(red: 0.36, green: 0.48, blue: 0.42)
 
     /// Distance from node center upward to the arrow image center (arrow points down at the node).
     private let currentStepArrowOffsetFromNodeCenter: CGFloat = 76
@@ -46,9 +47,9 @@ struct RoadMapView: View {
                 ZStack {
                     LinearGradient(
                         colors: [
-                            Color(red: 0.35, green: 0.55, blue: 0.35),
-                            Color(red: 0.42, green: 0.62, blue: 0.38),
-                            Color(red: 0.48, green: 0.68, blue: 0.42),
+                            Color(red: 0.86, green: 0.93, blue: 0.89),
+                            Color(red: 0.90, green: 0.95, blue: 0.91),
+                            Color.appBackground,
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -122,6 +123,9 @@ struct RoadMapView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear { viewModel.fetchRecords() }
+        .onReceive(NotificationCenter.default.publisher(for: .gamificationProgressDidUpdate)) { _ in
+            viewModel.fetchRecords()
+        }
     }
 
     // MARK: - Page indicator
@@ -163,7 +167,7 @@ struct RoadMapView: View {
                     .clipped()
             }
         }
-        .background(Color.white)
+        .background(Color.appSurface)
     }
 
     private func progressSummaryPage(height: CGFloat) -> some View {
@@ -223,8 +227,8 @@ struct RoadMapView: View {
                 ZStack {
                     Circle()
                         .fill(tier.isUnlocked
-                              ? Color(red: 0.40, green: 0.62, blue: 0.44)
-                              : Color(red: 0.82, green: 0.84, blue: 0.82))
+                              ? Color(red: 0.44, green: 0.60, blue: 0.50)
+                              : Color(red: 0.84, green: 0.86, blue: 0.85))
                         .frame(width: 44, height: 44)
 
                     if tier.isCompleted {
@@ -290,20 +294,21 @@ struct RoadMapView: View {
 
     private func mapCanvas(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> some View {
         ZStack {
-            Color.white
+            Color.appSurface
             groundDecor(w: w, h: h)
 
-            roadSideTreeDecorations(w: w, h: h)
+            roadSideTreeDecorations(w: w, h: h, pageHeight: pageHeight)
 
+            // Winding road — desaturated warm stone (less yellow / less contrast vs mint world).
             dynamicWindingPath(w: w, h: h, pageHeight: pageHeight)
                 .stroke(
-                    Color(red: 0.75, green: 0.65, blue: 0.50),
+                    Color(red: 0.76, green: 0.72, blue: 0.66),
                     style: StrokeStyle(lineWidth: 28, lineCap: .round, lineJoin: .round)
                 )
 
             dynamicWindingPath(w: w, h: h, pageHeight: pageHeight)
                 .stroke(
-                    Color(red: 0.85, green: 0.78, blue: 0.62),
+                    Color(red: 0.88, green: 0.85, blue: 0.78),
                     style: StrokeStyle(lineWidth: 18, lineCap: .round, lineJoin: .round)
                 )
 
@@ -358,8 +363,18 @@ struct RoadMapView: View {
         let height: CGFloat
     }
 
+    /// Pushes a point further toward the left or right screen edge (away from center), for landmark trees.
+    private func xOutsidePath(nodeX: CGFloat, margin: CGFloat, w: CGFloat) -> CGFloat {
+        let c = w * 0.5
+        if nodeX < c {
+            return nodeX - margin
+        }
+        return nodeX + margin
+    }
+
     /// Sparse trees alternating left / right down the canvas; spacing scales with map height.
-    private func roadSideTreePlacements(w: CGFloat, h: CGFloat) -> [RoadTreePlacement] {
+    /// For 14- and 21-day challenges, adds the farmland tree asset beside the first and last day nodes.
+    private func roadSideTreePlacements(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> [RoadTreePlacement] {
         let treeW = min(w * 0.165, 94)
         let treeH = treeW * 1.18
         let xLeft = w * 0.052
@@ -395,11 +410,50 @@ struct RoadMapView: View {
             if index > 22 { break }
         }
 
+        let days = viewModel.challenge.totalDays
+        if days == 14 || days == 21 {
+            let positions = dynamicNodePositions(w: w, h: h, pageHeight: pageHeight)
+            if positions.count >= 2 {
+                let mTreeW = min(w * 0.19, 100)
+                let mTreeH = mTreeW * 1.18
+                let margin = w * 0.2
+                let first = positions[0]
+                let last = positions[positions.count - 1]
+                let x0 = xOutsidePath(nodeX: first.x, margin: margin, w: w)
+                let x1 = xOutsidePath(nodeX: last.x, margin: margin, w: w)
+                let clamp: (CGFloat) -> CGFloat = { x in
+                    min(max(x, mTreeW * 0.5), w - mTreeW * 0.5)
+                }
+                placements.append(
+                    RoadTreePlacement(
+                        id: 10_000,
+                        x: clamp(x0),
+                        y: first.y,
+                        imageName: "road_tree_farmland",
+                        flip: x0 > w * 0.5,
+                        width: mTreeW,
+                        height: mTreeH
+                    )
+                )
+                placements.append(
+                    RoadTreePlacement(
+                        id: 10_001,
+                        x: clamp(x1),
+                        y: last.y,
+                        imageName: "road_tree_farmland",
+                        flip: x1 > w * 0.5,
+                        width: mTreeW,
+                        height: mTreeH
+                    )
+                )
+            }
+        }
+
         return placements
     }
 
-    private func roadSideTreeDecorations(w: CGFloat, h: CGFloat) -> some View {
-        let placements = roadSideTreePlacements(w: w, h: h)
+    private func roadSideTreeDecorations(w: CGFloat, h: CGFloat, pageHeight: CGFloat) -> some View {
+        let placements = roadSideTreePlacements(w: w, h: h, pageHeight: pageHeight)
         return ZStack {
             ForEach(placements) { p in
                 Image(p.imageName)
@@ -559,34 +613,157 @@ struct RoadMapView: View {
 
     // MARK: - Ground Decoration
 
-    private func groundDecor(w: CGFloat, h: CGFloat) -> some View {
-        Canvas { ctx, size in
-            let grassDark = Color(red: 0.32, green: 0.50, blue: 0.30)
-            let grassLight = Color(red: 0.50, green: 0.72, blue: 0.44)
+    private struct GroundGrassPlacement: Identifiable {
+        let id: Int
+        let x: CGFloat
+        let y: CGFloat
+        let width: CGFloat
+        let height: CGFloat
+        let opacity: Double
+        let flip: Bool
+    }
 
-            let patches: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
-                (0.10, 0.85, 60, 30), (0.80, 0.70, 50, 25),
-                (0.15, 0.40, 45, 22), (0.85, 0.30, 55, 28),
-                (0.60, 0.90, 40, 20), (0.25, 0.60, 35, 18),
-                (0.75, 0.15, 50, 25),
+    /// Base grass + optional extra clumps for the long 21-day scroll.
+    private func groundGrassPlacements(w: CGFloat, h: CGFloat) -> [GroundGrassPlacement] {
+        var items: [GroundGrassPlacement] = []
+
+        let patchPositions: [(CGFloat, CGFloat, CGFloat, CGFloat, Double, Bool)] = [
+            (0.10, 0.85, 60, 30, 0.52, true),
+            (0.80, 0.70, 50, 25, 0.50, false),
+            (0.15, 0.40, 45, 22, 0.50, true),
+            (0.85, 0.30, 55, 28, 0.50, false),
+            (0.60, 0.90, 40, 20, 0.52, false),
+            (0.25, 0.60, 35, 18, 0.50, true),
+            (0.75, 0.15, 50, 25, 0.50, true),
+        ]
+        for (i, row) in patchPositions.enumerated() {
+            let (px, py, pw, ph, o, flip) = row
+            items.append(
+                GroundGrassPlacement(
+                    id: i,
+                    x: w * px,
+                    y: h * py,
+                    width: pw,
+                    height: ph,
+                    opacity: o,
+                    flip: flip
+                )
+            )
+        }
+
+        let shrubPos: [(CGFloat, CGFloat, CGFloat, Double, Bool)] = [
+            (0.08, 0.72, 18, 0.62, false),
+            (0.92, 0.45, 22, 0.64, true),
+            (0.05, 0.25, 16, 0.60, true),
+            (0.88, 0.82, 20, 0.62, false),
+            (0.50, 0.12, 15, 0.60, true),
+            (0.15, 0.92, 14, 0.62, false),
+            (0.78, 0.20, 17, 0.60, true),
+            (0.55, 0.65, 13, 0.58, false),
+        ]
+        for (i, row) in shrubPos.enumerated() {
+            let (sx, sy, sr, o, flip) = row
+            let d = sr * 2
+            items.append(
+                GroundGrassPlacement(
+                    id: 1_000 + i,
+                    x: w * sx,
+                    y: h * sy,
+                    width: d,
+                    height: d,
+                    opacity: o,
+                    flip: flip
+                )
+            )
+        }
+
+        if viewModel.challenge.totalDays == 21 {
+            // Denser decoration along the tall map: more patches + shrubs between / beside the path.
+            let extraPatches: [(CGFloat, CGFloat, CGFloat, CGFloat, Double, Bool)] = [
+                (0.12, 0.94, 48, 24, 0.48, true),
+                (0.88, 0.86, 44, 22, 0.48, false),
+                (0.22, 0.78, 38, 19, 0.46, false),
+                (0.78, 0.70, 50, 26, 0.48, true),
+                (0.14, 0.62, 42, 21, 0.47, true),
+                (0.86, 0.54, 46, 23, 0.47, false),
+                (0.30, 0.46, 40, 20, 0.46, false),
+                (0.70, 0.38, 44, 22, 0.48, true),
+                (0.10, 0.30, 36, 18, 0.45, true),
+                (0.90, 0.22, 48, 24, 0.48, false),
+                (0.20, 0.14, 42, 21, 0.46, false),
+                (0.80, 0.08, 46, 23, 0.46, true),
+                (0.50, 0.50, 52, 28, 0.49, true),
+                (0.42, 0.72, 40, 20, 0.46, false),
+                (0.58, 0.30, 42, 21, 0.47, false),
             ]
-            for (px, py, pw, ph) in patches {
-                let rect = CGRect(x: w * px - pw / 2, y: h * py - ph / 2, width: pw, height: ph)
-                ctx.fill(Path(ellipseIn: rect), with: .color(grassDark.opacity(0.3)))
+            for (i, row) in extraPatches.enumerated() {
+                let (px, py, pw, ph, o, flip) = row
+                items.append(
+                    GroundGrassPlacement(
+                        id: 5_000 + i,
+                        x: w * px,
+                        y: h * py,
+                        width: pw,
+                        height: ph,
+                        opacity: o,
+                        flip: flip
+                    )
+                )
             }
 
-            let shrubs: [(CGFloat, CGFloat, CGFloat)] = [
-                (0.08, 0.72, 18), (0.92, 0.45, 22), (0.05, 0.25, 16),
-                (0.88, 0.82, 20), (0.50, 0.12, 15), (0.15, 0.92, 14),
-                (0.78, 0.20, 17), (0.55, 0.65, 13),
+            let extraShrubs: [(CGFloat, CGFloat, CGFloat, Double, Bool)] = [
+                (0.32, 0.90, 16, 0.58, true),
+                (0.68, 0.82, 15, 0.56, false),
+                (0.08, 0.74, 14, 0.55, false),
+                (0.92, 0.66, 17, 0.58, true),
+                (0.45, 0.58, 16, 0.57, true),
+                (0.55, 0.50, 15, 0.56, false),
+                (0.12, 0.42, 16, 0.57, false),
+                (0.88, 0.34, 15, 0.55, true),
+                (0.38, 0.26, 14, 0.54, true),
+                (0.62, 0.18, 16, 0.57, false),
+                (0.25, 0.96, 15, 0.56, false),
+                (0.75, 0.10, 16, 0.57, true),
+                (0.50, 0.66, 15, 0.55, true),
+                (0.33, 0.38, 14, 0.54, false),
+                (0.66, 0.46, 15, 0.56, true),
             ]
-            for (sx, sy, sr) in shrubs {
-                let rect = CGRect(x: w * sx - sr, y: h * sy - sr, width: sr * 2, height: sr * 2)
-                ctx.fill(Path(ellipseIn: rect), with: .color(grassLight.opacity(0.4)))
-                let innerRect = rect.insetBy(dx: sr * 0.3, dy: sr * 0.3).offsetBy(dx: -2, dy: -2)
-                ctx.fill(Path(ellipseIn: innerRect), with: .color(grassDark.opacity(0.2)))
+            for (i, row) in extraShrubs.enumerated() {
+                let (sx, sy, sr, o, flip) = row
+                let d = sr * 2
+                items.append(
+                    GroundGrassPlacement(
+                        id: 6_000 + i,
+                        x: w * sx,
+                        y: h * sy,
+                        width: d,
+                        height: d,
+                        opacity: o,
+                        flip: flip
+                    )
+                )
             }
         }
+
+        return items
+    }
+
+    private func groundDecor(w: CGFloat, h: CGFloat) -> some View {
+        let placements = groundGrassPlacements(w: w, h: h)
+        return ZStack {
+            ForEach(placements) { p in
+                Image("map_grass")
+                    .resizable()
+                    .renderingMode(.original)
+                    .scaledToFill()
+                    .frame(width: p.width, height: p.height)
+                    .clipShape(Ellipse())
+                    .opacity(p.opacity)
+                    .scaleEffect(x: p.flip ? -1 : 1, y: 1)
+                    .position(x: p.x, y: p.y)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Node View

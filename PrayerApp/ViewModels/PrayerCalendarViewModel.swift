@@ -45,6 +45,12 @@ final class PrayerCalendarViewModel: ObservableObject {
         selectedDaySessions = []
     }
 
+    /// Re-fetch sessions for the open day (e.g. after a `PrayerItem` is deleted).
+    func refreshSelectedDaySessions() {
+        guard let record = selectedDay, let date = record.date else { return }
+        selectedDaySessions = sessionService.fetchSessions(for: date)
+    }
+
     func nextMonth() {
         currentMonth = Calendar.current.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
         fetchRecords()

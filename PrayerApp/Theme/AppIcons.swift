@@ -18,6 +18,7 @@ enum AppIcons {
     static let markAnswered  = "sparkles"
     static let markOngoing   = "arrow.clockwise"
     static let archive       = "archivebox"
+    static let delete        = "trash.fill"
     static let addToToday    = "plus.circle"
     static let continuePrayer = "play.fill"
     static let startPraying  = "prayingHands"   // asset image — use Label(title, image:)
@@ -27,6 +28,10 @@ enum AppIcons {
     static let ongoing       = "clock"
     static let prayed        = "checkmark.circle"
     static let archived      = "archivebox"
+
+    /// Shared detail stat row (Prayer + Intercession detail)
+    static let statLastPrayed  = "checkmark.circle"
+    static let statTimesPrayed = "number"
 
     // Gamification
     static let footprint     = "figure.walk.motion"

@@ -1,6 +1,11 @@
 import Foundation
 import CoreData
 
+extension Notification.Name {
+    /// Posted after XP, drops, or level-relevant totals change so UI (e.g. challenge/tree banner) can refresh.
+    static let gamificationProgressDidUpdate = Notification.Name("gamificationProgressDidUpdate")
+}
+
 /// Central service for progression and reward bookkeeping.
 ///
 /// Responsibilities:
@@ -95,6 +100,7 @@ final class GamificationService: ObservableObject {
         )
         session.applyReward(breakdown)
         persistence.save()
+        postGamificationProgressDidUpdate()
         return breakdown
     }
 
@@ -193,6 +199,7 @@ final class GamificationService: ObservableObject {
         guard getTotalDrops() >= amount else { return false }
         defaults.set(defaults.integer(forKey: ProgressKey.dropsSpent) + amount,
                      forKey: ProgressKey.dropsSpent)
+        postGamificationProgressDidUpdate()
         return true
     }
 
@@ -200,12 +207,18 @@ final class GamificationService: ObservableObject {
         guard amount != 0 else { return }
         defaults.set(defaults.integer(forKey: ProgressKey.challengeBonusXP) + amount,
                      forKey: ProgressKey.challengeBonusXP)
+        postGamificationProgressDidUpdate()
     }
 
     private func addBonusDrops(_ amount: Int) {
         guard amount != 0 else { return }
         defaults.set(defaults.integer(forKey: ProgressKey.challengeBonusDrops) + amount,
                      forKey: ProgressKey.challengeBonusDrops)
+        postGamificationProgressDidUpdate()
+    }
+
+    private func postGamificationProgressDidUpdate() {
+        NotificationCenter.default.post(name: .gamificationProgressDidUpdate, object: nil)
     }
 
     // MARK: - Totals

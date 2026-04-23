@@ -1,12 +1,17 @@
 import SwiftUI
 
 struct IntercessoryDetailView: View {
-    let prayer: PrayerItem
+    @ObservedObject var prayer: PrayerItem
     var onMarkAnswered: (() -> Void)?
     var onArchive: (() -> Void)?
     var onAddToToday: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+
+    /// Recomputed each body pass so the button reflects tracker state on next open.
+    private var isAddedToTodaySession: Bool {
+        TodaySessionTracker.isAddedToday(prayer.id)
+    }
 
     var body: some View {
         ScrollView {
@@ -50,9 +55,9 @@ struct IntercessoryDetailView: View {
                 HStack(spacing: AppSpacing.md) {
                     metaItem(icon: "clock", label: "Added", value: prayer.formattedCreatedDate)
                     if let lastPrayed = prayer.formattedLastPrayedDate {
-                        metaItem(icon: "prayingHands", label: "Last Prayed", value: lastPrayed, isAssetImage: true)
+                        metaItem(icon: AppIcons.statLastPrayed, label: "Last Prayed", value: lastPrayed)
                     }
-                    metaItem(icon: "number", label: "Times Prayed", value: "\(prayer.prayedCount)")
+                    metaItem(icon: AppIcons.statTimesPrayed, label: "Times Prayed", value: "\(prayer.prayedCount)")
                 }
                 .padding(.horizontal, AppSpacing.lg)
 
@@ -92,17 +97,23 @@ struct IntercessoryDetailView: View {
                             Label("Mark as Answered \u{2728}", systemImage: AppIcons.markAnswered)
                         }
                         .primaryButtonStyle()
+
+                        Button {
+                            onAddToToday?()
+                            dismiss()
+                        } label: {
+                            Label(
+                                isAddedToTodaySession
+                                    ? "Already Added to Today's Session"
+                                    : "Add to Today's Session",
+                                systemImage: isAddedToTodaySession ? "checkmark.circle.fill" : AppIcons.addToToday
+                            )
+                        }
+                        .secondaryButtonStyle()
+                        .disabled(isAddedToTodaySession)
                     }
 
-                    Button {
-                        onAddToToday?()
-                        dismiss()
-                    } label: {
-                        Label("Add to Today's Session", systemImage: AppIcons.addToToday)
-                    }
-                    .secondaryButtonStyle()
-
-                    if prayer.statusEnum != .archived {
+                    if prayer.statusEnum != .archived, prayer.statusEnum != .answered {
                         Button {
                             onArchive?()
                             dismiss()
@@ -119,21 +130,14 @@ struct IntercessoryDetailView: View {
         .background(Color.appBackground.ignoresSafeArea())
         .navigationTitle("Intercession Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarPlainBackButton()
     }
 
-    private func metaItem(icon: String, label: String, value: String, isAssetImage: Bool = false) -> some View {
+    private func metaItem(icon: String, label: String, value: String) -> some View {
         VStack(spacing: AppSpacing.xxs) {
-            if isAssetImage {
-                Image(icon)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .foregroundColor(Color.appPrimary)
-            } else {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(Color.appPrimary)
-            }
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(Color.appPrimary)
             Text(value)
                 .font(AppFont.caption())
                 .fontWeight(.semibold)

@@ -10,24 +10,43 @@ struct CategoryBadge: View {
                 Image(category.iconName)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: compact ? 10 : 12, height: compact ? 10 : 12)
+                    .frame(width: 12, height: 12)
             } else {
                 Image(systemName: category.iconName)
-                    .font(.system(size: compact ? 10 : 12))
+                    .font(.system(size: 12))
             }
             if !compact {
                 Text(category.displayName)
                     .font(AppFont.caption())
-            } else {
-                Text(category.shortName)
-                    .font(AppFont.caption())
-                    .fontWeight(.bold)
             }
         }
         .foregroundColor(category.fallbackColor)
         .padding(.horizontal, compact ? AppSpacing.xs : AppSpacing.sm)
         .padding(.vertical, AppSpacing.xxs)
         .background(category.fallbackColor.opacity(0.15))
+        .cornerRadius(AppRadius.full)
+    }
+}
+
+// MARK: - Intercession (Today's saved from Others tab)
+
+struct IntercessoryGroupBadge: View {
+    let group: IntercessoryGroup
+    var compact: Bool = false
+
+    var body: some View {
+        HStack(spacing: AppSpacing.xxs) {
+            Image(systemName: group.iconName)
+                .font(.system(size: 12))
+            if !compact {
+                Text(group.displayName)
+                    .font(AppFont.caption())
+            }
+        }
+        .foregroundColor(group.accentColor)
+        .padding(.horizontal, compact ? AppSpacing.xs : AppSpacing.sm)
+        .padding(.vertical, AppSpacing.xxs)
+        .background(group.accentColor.opacity(0.15))
         .cornerRadius(AppRadius.full)
     }
 }

@@ -72,7 +72,9 @@ final class ACTSFlowViewModel: ObservableObject {
         collectedDrafts = [:]
         includeTodayPrayers = false
         todayPrayers = []
-        hasSavedPrayersToday = !prayerService.fetchTodayPrayers().isEmpty
+        let todayPersonal = prayerService.fetchTodayPrayers()
+        let todayIntercessory = prayerService.fetchIntercessoryItemsAddedToday()
+        hasSavedPrayersToday = !(todayPersonal.isEmpty && todayIntercessory.isEmpty)
         currentScreen = .actsStep(.adoration)
     }
 
@@ -149,6 +151,13 @@ final class ACTSFlowViewModel: ObservableObject {
         collectedDrafts.values.reduce(0) { $0 + $1.count }
     }
 
+    /// True when **Start Prayer Session** would include at least one item (ACTS drafts and/or today’s saved when the toggle is on).
+    var hasSessionContentToStart: Bool {
+        if totalDraftCount > 0 { return true }
+        if includeTodayPrayers, !todayPrayers.isEmpty { return true }
+        return false
+    }
+
     /// Returns false when skipping would lead to a guaranteed empty review screen —
     /// specifically on Supplication (the last step) when no drafts have been collected
     /// and there are no saved prayers to include either.
@@ -164,6 +173,7 @@ final class ACTSFlowViewModel: ObservableObject {
 
     private func loadTodayPrayers() {
         todayPrayers = prayerService.fetchTodayPrayers()
+            + prayerService.fetchIntercessoryItemsAddedToday()
     }
 
     // MARK: - Start Session

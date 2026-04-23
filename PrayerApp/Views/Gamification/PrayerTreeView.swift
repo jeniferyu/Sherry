@@ -109,6 +109,9 @@ struct PrayerTreeView: View {
                 viewModel.fetchTreeData()
                 oakShowcaseStageStored = min(5, max(1, oakShowcaseStageStored))
             }
+            .onReceive(NotificationCenter.default.publisher(for: .gamificationProgressDidUpdate)) { _ in
+                viewModel.fetchTreeData()
+            }
             .sheet(isPresented: $showingStarDetail) {
                 if let star = viewModel.selectedStar {
                     StarDetailSheet(star: star, onDismiss: {

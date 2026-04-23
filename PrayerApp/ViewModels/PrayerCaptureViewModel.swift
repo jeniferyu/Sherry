@@ -10,7 +10,7 @@ final class PrayerCaptureViewModel: ObservableObject {
     // MARK: - Form State
     @Published var title: String = ""
     @Published var content: String = ""
-    @Published var selectedCategory: PrayerCategory = .supplication
+    @Published var selectedCategory: PrayerCategory = .adoration
     @Published var isIntercessory: Bool = false
     @Published var selectedIntercessoryGroup: IntercessoryGroup = .family
     @Published var tags: String = ""
@@ -80,7 +80,7 @@ final class PrayerCaptureViewModel: ObservableObject {
     func resetForm() {
         title = ""
         content = ""
-        selectedCategory = .supplication
+        selectedCategory = .adoration
         isIntercessory = false
         selectedIntercessoryGroup = .family
         tags = ""

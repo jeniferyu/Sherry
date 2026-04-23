@@ -10,21 +10,35 @@ struct EmptyStateView: View {
 
     var body: some View {
         VStack(spacing: AppSpacing.lg) {
-            if isAssetImage {
-                Image(iconName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 56, height: 56)
-                    .foregroundColor(Color.appTextTertiary)
-            } else {
-                Image(systemName: iconName)
-                    .font(.system(size: 56, weight: .light))
-                    .foregroundColor(Color.appTextTertiary)
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.appPrimary.opacity(0.15), Color.appAccent.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+
+                if isAssetImage {
+                    Image(iconName)
+                        .resizable()
+                        .renderingMode(.template)
+                        .scaledToFit()
+                        .frame(width: 52, height: 52)
+                        .foregroundColor(Color.appPrimary)
+                } else {
+                    Image(systemName: iconName)
+                        .font(.system(size: 48, weight: .semibold))
+                        .foregroundColor(Color.appPrimary)
+                }
             }
 
             VStack(spacing: AppSpacing.xs) {
                 Text(title)
                     .font(AppFont.title2())
+                    .fontWeight(.bold)
                     .foregroundColor(Color.appTextPrimary)
 
                 Text(message)
@@ -39,7 +53,7 @@ struct EmptyStateView: View {
                     Text(actionTitle)
                 }
                 .primaryButtonStyle()
-                .frame(width: 200)
+                .frame(width: 220)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
